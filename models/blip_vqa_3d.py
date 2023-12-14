@@ -394,16 +394,6 @@ class BLIP_VQA3D(nn.Module):
                                                                 encoder_hidden_states = scene_object_embeds,
                                                                 encoder_attention_mask = scene_object_mask,                             
                                                                 return_dict = True)
-                # fuse scene and image attended question
-                # gate_coeff = self.gated_fusion(torch.cat([question_output.last_hidden_state, question_output_scene.last_hidden_state], dim=-1))
-                # # [N, L, 2D] => [N, L, 1]
-                # gate_coeff = torch.sigmoid(gate_coeff)
-                # question_output.last_hidden_state = gate_coeff * question_output.last_hidden_state + (1-gate_coeff) * question_output_scene.last_hidden_state
-                # question_feat_2d = self.lowrank_2d(question_output.last_hidden_state)
-                # question_feat_3d = self.lowrank_3d(question_output_scene.last_hidden_state)
-                # question_output.last_hidden_state = self.bilinear_fusion(question_feat_2d, question_feat_3d) + \
-                #                 question_output.last_hidden_state + \
-                #                 question_output_scene.last_hidden_state
                 question_output.last_hidden_state = self.fuse_2d3d(question_output, question_output_scene)
 
             if self.scene_feature_position == "parallel++":
