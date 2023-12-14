@@ -5,7 +5,7 @@ from models.mcan_module import MCAN_ED, AttFlat, LayerNorm, MCAN_E, AttFlat, Lay
 from models.backbone_module import Pointnet2Backbone
 from models.voting_module import VotingModule
 from models.proposal_module import ProposalModule
-from models.lang_module import LangModule, CLIPLangModule..
+from models.lang_module import LangModule, CLIPLangModule
 # from models.vilt_vqa_3d import ViltVQA3D
 from utils.vlm_align_util import (
     scene_bbox_to_2d_feat,
