@@ -1,16 +1,20 @@
+import os
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.path.join(CURRENT_DIR, "..", "data")
+
 DSET_PATH = {
-    "test_w_obj": "/home/mowentao/data/ScanQA/data/qa/ScanQA_v1.0_test_w_obj.json",
-    "test_wo_obj": "/home/mowentao/data/ScanQA/data/qa/ScanQA_v1.0_test_wo_obj.json",
-    "train": "/home/mowentao/data/ScanQA/data/qa/ScanQA_v1.0_train.json",
-    "val": "/home/mowentao/data/ScanQA/data/qa/ScanQA_v1.0_val.json",
+    "test_w_obj": os.path.join(DATA_DIR, "qa/ScanQA_v1.0_test_w_obj.json"),
+    "test_wo_obj": os.path.join(DATA_DIR, "qa/ScanQA_v1.0_test_wo_obj.json"),
+    "train": os.path.join(DATA_DIR, "qa/ScanQA_v1.0_train.json"),
+    "val": os.path.join(DATA_DIR, "qa/ScanQA_v1.0_val.json"),
 }
 DSET_PATH_SQA = {
-    "test": "/home/mowentao/data/ScanQA/data/qa/SQA_test.json",
-    "train": "/home/mowentao/data/ScanQA/data/qa/SQA_train_scanqa.json",
-    "val": "/home/mowentao/data/ScanQA/data/qa/SQA_val.json",
+    "test": os.path.join(DATA_DIR, "qa/SQA_test.json"),
+    "train": os.path.join(DATA_DIR, "qa/SQA_train_scanqa.json"),
+    "val": os.path.join(DATA_DIR, "qa/SQA_val.json"),
 }
 START_METHOD = "forkserver"
-DSET_VIEWS_PATH = "/home/mowentao/data/ScanQA/data/scene_views_aligned"
+DSET_VIEWS_PATH = os.path.join(DATA_DIR, "scene_views_aligned")
 SCAN_NAMES = list(
     filter(
         lambda n: n.endswith("00"),
@@ -18,13 +22,13 @@ SCAN_NAMES = list(
             [
                 line.rstrip()
                 for line in open(
-                    "/home/mowentao/data/ScanQA/data/scannet/meta_data/scannetv2.txt"
+                    os.path.join(DATA_DIR, "scannet/meta_data/scannetv2.txt")
                 )
             ]
         ),
     )
 )
-SCENE_FEAT_PATH = "/home/mowentao/data/ScanQA/data/scene_blip_features.pkl"
+SCENE_FEAT_PATH = os.path.join(DATA_DIR, "scene_blip_features.pkl")
 BLIP_PATH = "/home/mowentao/scratch/BLIP"
 
 import multiprocessing
@@ -98,73 +102,73 @@ def preprocess(image):
     image = transform(image)
     return image
 
-def blip_to_enet(feat):
-    # blip: [B, C, G, G], typically 30x30 for 480x480 image and ViT-L
-    # enet: [B, C, 32, 41]
-    # convert back to 480x480
-    image_feat = F.interpolate(feat, size=(480, 480), mode="bicubic", align_corners=False)
-    enet_feat = F.interpolate(image_feat, size=(32, 41), mode="bicubic", align_corners=False)
-    return enet_feat
+# def blip_to_enet(feat):
+#     # blip: [B, C, G, G], typically 30x30 for 480x480 image and ViT-L
+#     # enet: [B, C, 32, 41]
+#     # convert back to 480x480
+#     image_feat = F.interpolate(feat, size=(480, 480), mode="bicubic", align_corners=False)
+#     enet_feat = F.interpolate(image_feat, size=(32, 41), mode="bicubic", align_corners=False)
+#     return enet_feat
 
-def enet_to_blip(feat, grid_size=(30, 30)):
-    # enet: [B, C, 32, 41]
-    # blip: [B, C, G, G], typically 30x30 for 480x480 image and ViT-L
-    # convert back to 480x480
-    image_feat = F.interpolate(feat, size=(256, 328), mode="bicubic", align_corners=False)
-    blip_feat = F.interpolate(image_feat, size=grid_size, mode="bicubic", align_corners=False)
-    return blip_feat
+# def enet_to_blip(feat, grid_size=(30, 30)):
+#     # enet: [B, C, 32, 41]
+#     # blip: [B, C, G, G], typically 30x30 for 480x480 image and ViT-L
+#     # convert back to 480x480
+#     image_feat = F.interpolate(feat, size=(256, 328), mode="bicubic", align_corners=False)
+#     blip_feat = F.interpolate(image_feat, size=grid_size, mode="bicubic", align_corners=False)
+#     return blip_feat
 
-def project_enet_feature(pcs, feats, depths, poses, grad=False):
-    # init projector
-    global PROJECTOR
-    if PROJECTOR is None:
-        PROJECTOR = ProjectionHelper(INTRINSICS, 0.1, 4.0, FEAT_SIZE, 0.05)
+# def project_enet_feature(pcs, feats, depths, poses, grad=False):
+#     # init projector
+#     global PROJECTOR
+#     if PROJECTOR is None:
+#         PROJECTOR = ProjectionHelper(INTRINSICS, 0.1, 4.0, FEAT_SIZE, 0.05)
 
-    if grad:
-        projector = Projection.apply
-    else:
-        projector = PROJECTOR.project
-    # batch_size, num_points
-    B, P = pcs.shape[:2]
+#     if grad:
+#         projector = Projection.apply
+#     else:
+#         projector = PROJECTOR.project
+#     # batch_size, num_points
+#     B, P = pcs.shape[:2]
     
-    indices_3ds = torch.zeros(B, P + 1).long().cuda()
-    indices_2ds = torch.zeros(B, P + 1).long().cuda()
+#     indices_3ds = torch.zeros(B, P + 1).long().cuda()
+#     indices_2ds = torch.zeros(B, P + 1).long().cuda()
 
-    for i in range(B):
-        indices = PROJECTOR.compute_projection(pcs[i], depths[i], poses[i])
-        if indices:
-            indices_3ds[i] = indices[0].long()
-            indices_2ds[i] = indices[1].long()
-            # print("found {} mappings in {} points from frame {}".format(indices_3ds[i][0], num_points, i))
+#     for i in range(B):
+#         indices = PROJECTOR.compute_projection(pcs[i], depths[i], poses[i])
+#         if indices:
+#             indices_3ds[i] = indices[0].long()
+#             indices_2ds[i] = indices[1].long()
+#             # print("found {} mappings in {} points from frame {}".format(indices_3ds[i][0], num_points, i))
         
-    # indice_3d, indice_2d = PROJECTOR.compute_projection(pc, depth, pose) # [N_p, K]
+#     # indice_3d, indice_2d = PROJECTOR.compute_projection(pc, depth, pose) # [N_p, K]
 
-    # feat ~ [C, H, W]
-    # NOTE: no-gradient?
-    proj_feats = feats.new_zeros(B, P, feats.size(1)) # [B, N_p, C]
-    feat_masks = feats.new_zeros(B, P).bool() # [B, N_p]
-    for i in range(B):
-        proj_feat = projector(feats[i], indices_3ds[i], indices_2ds[i], P).transpose(1, 0) # [N_p, C]
-        # find out which points are projected
-        feat_mask = ((proj_feat == 0).sum(1) != proj_feat.size(1)).bool() # [N_p], remaining filled with 0 feature
-        proj_feats[i] = proj_feat
-        feat_masks[i] = feat_mask
-    return proj_feats, feat_masks
+#     # feat ~ [C, H, W]
+#     # NOTE: no-gradient?
+#     proj_feats = feats.new_zeros(B, P, feats.size(1)) # [B, N_p, C]
+#     feat_masks = feats.new_zeros(B, P).bool() # [B, N_p]
+#     for i in range(B):
+#         proj_feat = projector(feats[i], indices_3ds[i], indices_2ds[i], P).transpose(1, 0) # [N_p, C]
+#         # find out which points are projected
+#         feat_mask = ((proj_feat == 0).sum(1) != proj_feat.size(1)).bool() # [N_p], remaining filled with 0 feature
+#         proj_feats[i] = proj_feat
+#         feat_masks[i] = feat_mask
+#     return proj_feats, feat_masks
 
-def project_blip_to_pointcloud(pcs, feats, depths, poses, grad=False):
-    enet_feats = blip_to_enet(feats)
-    proj_feats, feat_masks = project_enet_feature(pcs, enet_feats, depths, poses, grad=grad)
-    return proj_feats, feat_masks
+# def project_blip_to_pointcloud(pcs, feats, depths, poses, grad=False):
+#     enet_feats = blip_to_enet(feats)
+#     proj_feats, feat_masks = project_enet_feature(pcs, enet_feats, depths, poses, grad=grad)
+#     return proj_feats, feat_masks
 
-def project_patch_to_pointcloud(pcs, feats, depths, poses, grad=False):
-    # feats [B, C, G, G] => [B, G, G] of one-hot position encoding
-    # feats_pos = torch.arange(32 * 41).to(feats.device).long().view(1, 1, feats.size(2), feats.size(3)).expand(feats.size(0)) # [B, 1, G, G]
-    G = feats.size(2)
-    feats_pos = torch.stack(torch.meshgrid(torch.arange(G), torch.arange(G)), dim=-1) # [G, G, 2]
-    feats_pos = feats_pos.permute(2, 0, 1).unsqueeze(0).expand(feats.size(0), 2, G, G).to(feats.device) # [B, 2, G, G]
-    feats_pos = blip_to_enet(feats_pos) # [B, 2, 32, 41]
-    patch_assignment, feat_masks = project_enet_feature(pcs, feats_pos, depths, poses, grad=grad) # [B, N_p, 2]
-    ...
+# def project_patch_to_pointcloud(pcs, feats, depths, poses, grad=False):
+#     # feats [B, C, G, G] => [B, G, G] of one-hot position encoding
+#     # feats_pos = torch.arange(32 * 41).to(feats.device).long().view(1, 1, feats.size(2), feats.size(3)).expand(feats.size(0)) # [B, 1, G, G]
+#     G = feats.size(2)
+#     feats_pos = torch.stack(torch.meshgrid(torch.arange(G), torch.arange(G)), dim=-1) # [G, G, 2]
+#     feats_pos = feats_pos.permute(2, 0, 1).unsqueeze(0).expand(feats.size(0), 2, G, G).to(feats.device) # [B, 2, G, G]
+#     feats_pos = blip_to_enet(feats_pos) # [B, 2, 32, 41]
+#     patch_assignment, feat_masks = project_enet_feature(pcs, feats_pos, depths, poses, grad=grad) # [B, N_p, 2]
+#     ...
 
 
 def preprocess_vqa(image):
@@ -402,11 +406,11 @@ def get_blip_model(i2tfile, i2tfile_eval, topk=1, alternative_ckpt: str="", dset
     return (images, images_eval), model, (scene_view_map, scene_view_map_eval), (poses, poses_eval), (depths, depths_eval), grid_size
 
 def get_blip_model_simple(alternative_ckpt: str="", random_init_blip=False, **kwargs):
-    device = torch.device("cuda", dist.get_rank()) 
     # --- Init BLIP Model
+    device = torch.device("cuda", dist.get_rank()) 
     logger.info("Loading BLIP Models...")
     # pretrained = os.path.join(BLIP_PATH, "ckpts/model_base_vqa_capfilt_large.pth") if not random_init_blip else None
-    model = blip_vqa3d(git 
+    model = blip_vqa3d(
         pretrained=os.path.join(BLIP_PATH, "ckpts/model_base_vqa_capfilt_large.pth"),
         image_size=480, 
         vit="base",

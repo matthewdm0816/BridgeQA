@@ -414,7 +414,7 @@ class BLIP_VQA3D(nn.Module):
                     answers.append(answer)
                 return answers, self.fuse_2d3d(question_output, question_output_scene), question_attention_mask
 
-            # rank answers - equiv to one-step beam search + brute force decoding
+            # rank answers - equiv to one-step beam search + brute force decodingg
             # NOTE: here answer should be the all_answer list
             assert answer is not None, "answer must be specified if use text decoder (free-form answer mode)"
             answer = self.tokenizer(answer, padding='longest', return_tensors="pt").to(image.device) 
