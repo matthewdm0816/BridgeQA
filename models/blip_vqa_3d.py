@@ -1,9 +1,5 @@
-# import sys
-# sys.path.insert(0, '/home/mowentao/scratch/BLIP') # temporarily resolve to BLIP.models
-# print(sys.path)
 from models.med import BertConfig, BertModel, BertLMHeadModel, BertEncoder, BertPooler, BertLMPredictionHead, BertLMClassificationModel, BertPrefixModel, BertModelTwin
 from models.blip import create_vit, init_tokenizer, load_checkpoint
-# sys.path.pop(0)
 
 import torch
 from torch import nn
@@ -12,14 +8,13 @@ from transformers import BertTokenizer
 import numpy as np
 from copy import deepcopy
 from models.vit import interpolate_pos_embed
-from utils.reset_weight import weight_reset
-from utils.gradient_reversal import GradientReversal
 import random
 from argparse import Namespace
 from icecream import ic
+import os
 
 SAVE_PATH = "./temp_model.pth"
-    
+DEFAULT_BLIP_CONFIG = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../BLIP/configs/med_config.json")
 
 def to_all_answer_score(ans_idx, ans_score, num_answers, batch_size):
     all_answer_score = torch.zeros(
@@ -49,30 +44,27 @@ def concat_repeat(a, b, n_repeat):
 
 class BLIP_VQA3D(nn.Module):
     def __init__(self,                 
-                 med_config = '/home/mowentao/scratch/BLIP/configs/med_config.json',  
+                 #  med_config = '/home/mowentao/scratch/BLIP/configs/med_config.json',  
+                 med_config = DEFAULT_BLIP_CONFIG,
                  image_size = 480,
                  vit = 'base',
                  vit_grad_ckpt = False,
                  vit_ckpt_layer = 0,
-                 use_selector = False,   
-                 coeff_selector = 1.,     
                  scene_size=128,           
                  num_answers=None,
                  use_text_decoder=False,
                  answer_pdrop=0.1,
-                 scene_feature_position="image",
+                 scene_feature_position="paralleltwin",
                  use_scene_weight=False,
                  use_scene_classifier=False,
                  use_scene_classifier_2d3d=False,
                  not_copy_weights=False,
-                 scene_encoder_layers=2,
                  mix_tokens=False,
                  share_decoder=False,
                  num_hidden_layers_twin=None,
-                 grl=False,
-                 grl_weight=0.1,
                  encoder_layers=None,
                  decoder_layers=None,
+                 **kwargs,
                  ):
         """
         Args:
@@ -82,6 +74,7 @@ class BLIP_VQA3D(nn.Module):
         """               
         super().__init__()
         assert num_answers is not None, "num_answers must be specified"
+        assert scene_feature_position == "paralleltwin"
         self.num_answers = num_answers
         self.use_text_decoder = use_text_decoder
         self.scene_feature_position = scene_feature_position
@@ -94,6 +87,8 @@ class BLIP_VQA3D(nn.Module):
         
         self.visual_encoder, vision_width = create_vit(vit, image_size, vit_grad_ckpt, vit_ckpt_layer, drop_path_rate=0.1)
         self.tokenizer = init_tokenizer()  
+
+        print(f"Unused kwargs: {kwargs}")
         
         encoder_config = BertConfig.from_json_file(med_config)
         if encoder_layers is not None:
@@ -101,46 +96,31 @@ class BLIP_VQA3D(nn.Module):
         encoder_config.encoder_width = vision_width
         if num_hidden_layers_twin is not None:
             setattr(encoder_config, "num_hidden_layers_twin", num_hidden_layers_twin)
-        if self.scene_feature_position != "question":
-            if self.scene_feature_position == "paralleltwin":
-                # setattr(encoder_config, "num_hidden_layers_twin", scene_encoder_layers)
-                self.text_encoder = BertModelTwin(config=encoder_config, add_pooling_layer=False)
-            else:
-                self.text_encoder = BertModel(config=encoder_config, add_pooling_layer=False)
-        elif self.scene_feature_position == "question":
-            self.text_encoder = BertPrefixModel(config=encoder_config, add_pooling_layer=False)
 
+        # --- Twin Transformer
+        self.text_encoder = BertModelTwin(config=encoder_config, add_pooling_layer=False)
+
+        # --- Simple Fusion Module
         if self.parallel:
-            if self.scene_feature_position not in ["parallelshare", "paralleltwin"]:
-                encoder_config_3d = deepcopy(encoder_config)
-                if scene_encoder_layers > 0:
-                    encoder_config_3d.num_hidden_layers = scene_encoder_layers
-                self.text_encoder_scene = BertModel(config=encoder_config_3d, add_pooling_layer=False)
-            # self.gated_fusion = nn.Linear(encoder_config.hidden_size * 2, 1)
             lowrank = encoder_config.hidden_size // 8
             self.lowrank_2d = nn.Linear(encoder_config.hidden_size, lowrank)
             self.lowrank_3d = nn.Linear(encoder_config.hidden_size, lowrank)
             self.bilinear_fusion = nn.Bilinear(lowrank, lowrank, encoder_config.hidden_size)
             
-        
+        # --- Answer Decoder
         decoder_config = BertConfig.from_json_file(med_config)     
         if decoder_layers is not None:
             decoder_config.num_hidden_layers = decoder_layers
-        # decoder_config.vocab_size = num_answers
-        # self.text_decoder = BertLMClassificationModel(decoder_config)  
         self.text_decoder = BertLMHeadModel(config=decoder_config)
 
-        if self.scene_feature_position in ["parallel++", "paralleltwin"]:
-            # late fusion text decoder 
-            decoder_config_3d = deepcopy(decoder_config)
-            # keep original num_hidden_layers?
-            # decoder_config_3d.num_hidden_layers = 2 
-            if self.share_decoder:
-                self.text_decoder_scene = self.text_decoder
-            else:
-                self.text_decoder_scene = BertLMHeadModel(config=decoder_config_3d)
+        # --- 3D Answer Decoder
+        decoder_config_3d = deepcopy(decoder_config)
+        if self.share_decoder:
+            self.text_decoder_scene = self.text_decoder
+        else:
+            self.text_decoder_scene = BertLMHeadModel(config=decoder_config_3d)
     
-
+        # --- Answer Classifier (if use_scene_classifier, then this is the final classifier)
         self.answer_cls = nn.Sequential(
             nn.Linear(encoder_config.hidden_size, encoder_config.hidden_size),
             nn.GELU(),
@@ -158,12 +138,6 @@ class BLIP_VQA3D(nn.Module):
         )
 
         # --- 3d adapter linear
-        # self.linear_scene_object = nn.Sequential(
-        #     nn.Linear(scene_size, decoder_config.hidden_size),
-        #     nn.GELU(),
-        #     nn.Dropout(0.1),
-        #     nn.Linear(decoder_config.hidden_size, decoder_config.hidden_size),
-        # )
         self.linear_scene_object = nn.Sequential(
             nn.Linear(scene_size, decoder_config.hidden_size),
             nn.GELU(),
@@ -184,23 +158,6 @@ class BLIP_VQA3D(nn.Module):
         )
 
 
-        self.depth_fusion = nn.Sequential(
-            nn.Linear(decoder_config.hidden_size + 1, decoder_config.hidden_size),
-            nn.GELU(),
-            nn.Dropout(0.1),
-            nn.LayerNorm(decoder_config.hidden_size)
-        )
-
-        # --- view selector
-        if use_selector:
-            sel_config = BertConfig.from_json_file(med_config)
-            sel_config.num_hidden_layers = 2
-            self.selector = BertModel(sel_config)
-            self.selector_head = nn.Linear(sel_config.hidden_size, 1)
-            self.coeff_selector = coeff_selector
-        else:
-            self.selector = None
-
         self.use_scene_weight = use_scene_weight
         self.scene_weight = nn.Parameter(torch.zeros(1, dtype=torch.float32) + 1e-5, requires_grad=True)
 
@@ -215,19 +172,6 @@ class BLIP_VQA3D(nn.Module):
             nn.Sigmoid(),
         )
 
-        self.grl = grl
-        self.grl_weight = grl_weight
-        if self.grl:
-            # self.grl_layer = GradientReversal()
-            self.domain_classifier = nn.Sequential(
-                GradientReversal(alpha=1.0),
-                nn.Linear(encoder_config.hidden_size, encoder_config.hidden_size),
-                nn.GELU(),
-                nn.Dropout(0.1),
-                nn.Linear(encoder_config.hidden_size, 1),
-            ) # 1 for 3D, 0 for 2D
-            
-        
         # tie weights of text encoder and text decoder (image/scene)
         self.copy_weights()
 
@@ -236,35 +180,18 @@ class BLIP_VQA3D(nn.Module):
         return self.scene_feature_position in ["parallel", "parallel++", "parallelshare", "paralleltwin"]
 
     def copy_weights(self):
-        # copy weights from self.text_encoder to self.text_encoder_scene
+        # copy encoder and decoder weights
         if self.parallel and not self.not_copy_weights:
-            if self.scene_feature_position == "paralleltwin":
-                self.text_encoder.init_twin()
-            if self.scene_feature_position not in ["parallel++", "paralleltwin"]:
-                self.text_encoder_scene.load_state_dict(self.text_encoder.state_dict(), strict=False)
-            if self.scene_feature_position in ["parallel++", "paralleltwin"] and not self.share_decoder:
+            self.text_encoder.init_twin()
+            if not self.share_decoder:
                 self.text_decoder_scene.load_state_dict(self.text_decoder.state_dict(), strict=False)
             
-
-    def copy_weights_except_layernorm(self):
-        # copy weights from self.text_encoder to self.text_encoder_scene. 
-        # except LayerNorm weights
-        if self.parallel:
-            text_encoder_state_dict = self.text_encoder.state_dict()
-            ...
 
     def save_state_dict(self):
         # self.saved_state_dict = deepcopy(self.state_dict())
         torch.save(self.state_dict(), SAVE_PATH)
 
     def reinit_params(self):
-        # assert hasattr(self, "init_state_dict"), "init_state_dict is not found"
-        # # re-init modules except text_encoder
-        # filtered_state_dict = {k: v for k, v in self.init_state_dict.items() if "text_encoder" not in k}
-        # self.load_state_dict(filtered_state_dict, strict=False)
-        # reinit all modules
-        # self.apply(self._init_weights)
-
         # reload pretrained weights
         checkpoint = torch.load(self.pretrained, map_location="cpu")
         state_dict = checkpoint["model"]
@@ -281,10 +208,7 @@ class BLIP_VQA3D(nn.Module):
                 if state_dict[key].shape != self.state_dict()[key].shape:
                     print("delete shape unmatched key in state_dict: ", key)
                     del state_dict[key]
-                #     continue
-                # if "text_encoder" in key:
-                #     print("delete text_encoder key in state_dict: ", key)
-                #     del state_dict[key]
+
 
         msg = self.load_state_dict(state_dict, strict=False)
         print("reload checkpoint from %s" % self.pretrained)
@@ -314,10 +238,6 @@ class BLIP_VQA3D(nn.Module):
             B, P, H = image_embeds.size()
             image_embeds = image_embeds.view(B//P, P*image_per_sample, H) # 
         
-        if depth_map is not None:
-            # depth_map = self.depth_encoder(depth_map.view(image_embeds.size(0), -1, 1)) # [batch_size, num_patches-1, 1]
-            image_embeds_dep = torch.cat([image_embeds[:, 1:], depth_map], dim=-1) # [batch_size, num_patches-1, hidden_size+1]
-            image_embeds[:, 1:] = self.depth_fusion(image_embeds_dep) + image_embeds[:, 1:] # [batch_size, num_patches-1, hidden_size]
 
         image_atts = torch.ones(image_embeds.size()[:-1],dtype=torch.long).to(image.device)
         
@@ -342,14 +262,6 @@ class BLIP_VQA3D(nn.Module):
                 scene_object_embeds = torch.cat([image_pose.unsqueeze(1), scene_object_embeds], dim=1)
                 scene_object_mask = torch.cat([torch.ones(image_pose.size(0), 1, dtype=torch.long).to(image.device), scene_object_mask], dim=1)
             
-            # replace image feature with scene object feature if needed
-            if self.scene_feature_position == "replace":
-                image_embeds = scene_object_embeds
-                image_atts = scene_object_mask
-
-            if self.scene_feature_position == "image" or (self.scene_feature_position == "parallel++" and self.mix_tokens):
-                image_embeds = torch.cat([image_embeds, scene_object_embeds], dim=1)
-                image_atts = torch.cat([image_atts, scene_object_mask], dim=1)
         
         if self.scene_feature_position == "paralleltwin":
             question_output = self.text_encoder(question.input_ids, 
@@ -368,51 +280,6 @@ class BLIP_VQA3D(nn.Module):
             data_dict["2d_self_attention"], data_dict["3d_self_attention"] = question_output.attentions[-1] # take the last layer
             data_dict["2d_cross_attention"], data_dict["3d_cross_attention"] = question_output.cross_attentions[-1]
             ic(data_dict["2d_self_attention"].shape, data_dict["3d_self_attention"].shape, data_dict["2d_cross_attention"].shape, data_dict["3d_cross_attention"].shape)
-        else:
-            if self.scene_feature_position != "question":
-                question_output = self.text_encoder(question.input_ids, 
-                                                    attention_mask = question.attention_mask, 
-                                                    encoder_hidden_states = image_embeds,
-                                                    encoder_attention_mask = image_atts,                             
-                                                    return_dict = True)
-                question_attention_mask = question.attention_mask
-            elif self.scene_feature_position == "question":
-                question_output = self.text_encoder(question.input_ids, 
-                                                    attention_mask = question.attention_mask, 
-                                                    encoder_hidden_states = image_embeds,
-                                                    encoder_attention_mask = image_atts,   
-                                                    prefix_embeds = scene_object_embeds,
-                                                    prefix_attention_mask = scene_object_mask,                          
-                                                    return_dict = True)
-                
-                question_attention_mask = torch.cat([scene_object_mask, question.attention_mask], dim=1)
-
-            # seperate scene-question cross attention
-            if self.scene_feature_position == "parallel":
-                question_output_scene = self.text_encoder_scene(question.input_ids,
-                                                                attention_mask = question.attention_mask, 
-                                                                encoder_hidden_states = scene_object_embeds,
-                                                                encoder_attention_mask = scene_object_mask,                             
-                                                                return_dict = True)
-                question_output.last_hidden_state = self.fuse_2d3d(question_output, question_output_scene)
-
-            if self.scene_feature_position == "parallel++":
-                question_output_scene = self.text_encoder_scene(question.input_ids,
-                                                                attention_mask = question.attention_mask, 
-                                                                encoder_hidden_states = scene_object_embeds,
-                                                                encoder_attention_mask = scene_object_mask,                             
-                                                                return_dict = True)
-                # late fuse later
-
-            if self.scene_feature_position == "parallelshare":
-                question_output_scene = self.text_encoder(question.input_ids,
-                                                            attention_mask = question.attention_mask, 
-                                                            encoder_hidden_states = scene_object_embeds,
-                                                            encoder_attention_mask = scene_object_mask,                             
-                                                            return_dict = True,
-                                                            layernorm_idx=1,
-                                                            forward_layers=[0,1])
-                
             
         
         if train:               
@@ -437,17 +304,6 @@ class BLIP_VQA3D(nn.Module):
                 loss = answer_output.loss
                 loss = loss.sum() / image_embeds.size(0)
 
-                if self.grl:
-                    domain_pred_2d = self.domain_classifier(question_output.last_hidden_state[:, 0, :])
-                    domain_pred_3d = self.domain_classifier(question_output_scene.last_hidden_state[:, 0, :])
-                    domain_pred = torch.cat([domain_pred_2d, domain_pred_3d], dim=0).squeeze(-1) # [2B, 1] => [2B]
-                    domain_label = torch.cat([torch.zeros(domain_pred_2d.size(0), dtype=torch.long).to(image.device),
-                                                torch.ones(domain_pred_3d.size(0), dtype=torch.long).to(image.device)], dim=0) # [2B]
-                                                
-                    loss_domain = F.binary_cross_entropy_with_logits(domain_pred, domain_label.float())
-                    loss_domain = loss_domain * self.grl_weight
-                    loss = loss + loss_domain
-                
                 if self.scene_feature_position in ["parallel++", "parallelshare", "paralleltwin"]:
                     # predict from question_output_scene
                     if self.use_scene_classifier:
@@ -558,12 +414,7 @@ class BLIP_VQA3D(nn.Module):
                     answers.append(answer)
                 return answers, self.fuse_2d3d(question_output, question_output_scene), question_attention_mask
 
-            # rank answers
-            # question_output = self.text_encoder(question.input_ids, 
-            #                                     attention_mask = question.attention_mask, 
-            #                                     encoder_hidden_states = image_embeds,
-            #                                     encoder_attention_mask = image_atts,                             
-            #                                     return_dict = True)
+            # rank answers - equiv to one-step beam search + brute force decoding
             # NOTE: here answer should be the all_answer list
             assert answer is not None, "answer must be specified if use text decoder (free-form answer mode)"
             answer = self.tokenizer(answer, padding='longest', return_tensors="pt").to(image.device) 
