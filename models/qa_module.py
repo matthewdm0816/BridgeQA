@@ -7,19 +7,19 @@ from models.voting_module import VotingModule
 from models.proposal_module import ProposalModule
 from models.lang_module import LangModule, CLIPLangModule
 # from models.vilt_vqa_3d import ViltVQA3D
-from utils.vlm_align_util import (
-    scene_bbox_to_2d_feat,
-    repeat_elements,
-    reverse_augment,
-    reverse_align,
-    jitter_bbox,
-    calculate_cube_corners,
-    calculate_overlap,
-    batch_iou,
-    corners_to_edges,
-    DSET_VIEWS_PATH,
-    reverse_align_simple,
-)
+# from utils.vlm_align_util import (
+#     scene_bbox_to_2d_feat,
+#     repeat_elements,
+#     reverse_augment,
+#     reverse_align,
+#     jitter_bbox,
+#     calculate_cube_corners,
+#     calculate_overlap,
+#     batch_iou,
+#     corners_to_edges,
+#     DSET_VIEWS_PATH,
+#     reverse_align_simple,
+# )
 from lib.dataset import DC
 # from models.seqmae import MaskedAutoencoderTransformer
 import random
@@ -505,11 +505,11 @@ class ScanQA(nn.Module):
             question_ids = data_dict["question_id_str"]
             images, poses, depths = self.load_image(data_dict, device)
             # images ~ [B, num_view, ...]
-            print("reversing axis align")
-            original_point_cloud = reverse_align_simple(
-                points=data_dict["original_point_cloud"],
-                align_mat=data_dict["axis_align_matrix"],
-            )
+            # print("reversing axis align")
+            # original_point_cloud = reverse_align_simple(
+            #     points=data_dict["original_point_cloud"],
+            #     align_mat=data_dict["axis_align_matrix"],
+            # )
             # if self.project_2d:
             #     align_proj_feats = []
             #     align_proj_masks = []
