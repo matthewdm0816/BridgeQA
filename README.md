@@ -8,7 +8,7 @@ We also thank [BLIP](https://github.com/salesforce/BLIP/) for the 2D Vision-Lang
 
 ## TODO
 - [ ] Make copy of BLIP codes
-- [ ] Clean-up model codes
+- [-] Clean-up model codes
 - [ ] Clean-up training codes
 - [ ] Test training
 - [ ] Clean-up prediction codes

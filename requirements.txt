@@ -14,3 +14,6 @@ spacy
 nltk
 pycocoevalcap
 
+icecream
+pretty_errors
+

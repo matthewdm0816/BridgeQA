@@ -21,23 +21,6 @@ NEAR_THRESHOLD = 0.3
 GT_VOTE_FACTOR = 3 # number of GT votes per point
 OBJECTNESS_CLS_WEIGHTS = [0.2, 0.8] # put larger weights on positive objectness
 
-# class ChamferDistanceL2(torch.nn.Module):
-#     f''' Chamder Distance L2
-#     '''
-#     def __init__(self, ignore_zeros=False):
-#         super().__init__()
-#         self.ignore_zeros = ignore_zeros
-
-#     def forward(self, xyz1, xyz2):
-#         batch_size = xyz1.size(0)
-#         if batch_size == 1 and self.ignore_zeros:
-#             non_zeros1 = torch.sum(xyz1, dim=2).ne(0)
-#             non_zeros2 = torch.sum(xyz2, dim=2).ne(0)
-#             xyz1 = xyz1[non_zeros1].unsqueeze(dim=0)
-#             xyz2 = xyz2[non_zeros2].unsqueeze(dim=0)
-
-#         dist1, dist2 = ChamferFunction.apply(xyz1, xyz2)
-#         return torch.mean(dist1) + torch.mean(dist2)
 
 def compute_vote_loss(data_dict):
     """ Compute vote loss: Match predicted votes to GT votes.
@@ -283,27 +266,16 @@ def compute_answer_classification_loss(data_dict):
     # decoder/main branch losses
     if "decoder_loss" in data_dict:
         loss_answer = data_dict["decoder_loss"] # already computed from text decoder
-    elif False and "answer_cat_scores" in data_dict:
-        #  data_dict["answer_cat_scores"]: batch_size, num_answers
-        loss_answer = F.binary_cross_entropy_with_logits(data_dict["answer_scores"], data_dict["answer_cat_scores"], reduction='sum') / data_dict["answer_scores"].shape[0]
     else:
         loss_answer = F.cross_entropy(data_dict["answer_scores"], data_dict["answer_cat"])
     
     # 3D scene loss
     if "answer_scores_scene" in data_dict:
-        if False and "answer_cat_scores" in data_dict:
-            #  data_dict["answer_cat_scores"]: batch_size, num_answers
-            loss_answer += F.binary_cross_entropy_with_logits(data_dict["answer_scores_scene"], data_dict["answer_cat_scores"], reduction='sum') / data_dict["answer_scores_scene"].shape[0]
-        else:
-            loss_answer += F.cross_entropy(data_dict["answer_scores_scene"], data_dict["answer_cat"])
+        loss_answer += F.cross_entropy(data_dict["answer_scores_scene"], data_dict["answer_cat"])
 
     # 2D3D loss
     if "answer_scores_2d3d" in data_dict:
-        if False and "answer_cat_scores" in data_dict:
-            #  data_dict["answer_cat_scores"]: batch_size, num_answers
-            loss_answer += F.binary_cross_entropy_with_logits(data_dict["answer_scores_scene"], data_dict["answer_cat_scores"], reduction='sum') / data_dict["answer_scores_scene"].shape[0]
-        else:
-            loss_answer += F.cross_entropy(data_dict["answer_scores_2d3d"], data_dict["answer_cat"])
+        loss_answer += F.cross_entropy(data_dict["answer_scores_2d3d"], data_dict["answer_cat"])
 
     return loss_answer
 
@@ -380,144 +352,9 @@ def js_divergence_logits(p, q):
 
 
 
-def compute_align_loss(data_dict: dict):
-    # ic(data_dict["object_feat_ts"].shape, data_dict["region_feats"].shape)
-    object_feat_ts = data_dict["object_feat_ts"] # [B, N_proposal, F]
-    region_feats= data_dict["region_feats"] # [B, N_proposal, F]
-    align_mask = data_dict["align_mask"] # [B, N_proposal]
-    if "region_feats_recon" not in data_dict: 
-        # non-variational matching
-        single_similarity = F.cosine_similarity(object_feat_ts[align_mask], region_feats[align_mask], dim=-1) # [N_aligned_p]
-        loss_align = 1 - single_similarity.mean()
-        ic(loss_align.item())
-        # loss_align = F.mse_loss(data_dict["object_feat_ts"], data_dict["region_feats"], reduction='none').sum(dim=-1).mean()
-        # loss_align *= data_dict["align_bs"]
-        if torch.isnan(loss_align):
-            loss_align = torch.tensor(0.0).to(loss_align) # no aligned regions (0/0 makes nan)
-    else:
-        # vae loss
-        loss_recon = (
-            F.mse_loss(object_feat_ts[align_mask], data_dict["object_feats_recon"]) +
-            F.mse_loss(region_feats[align_mask], data_dict["region_feats_recon"])
-        )
-        # loss_prior = (
-        #     torch.mean(-0.5 * torch.sum(1 + data_dict["object_logvar"] - data_dict["object_mu"].pow(2) - data_dict["object_logvar"].exp(), dim = -1)) + 
-        #     torch.mean(-0.5 * torch.sum(1 + data_dict["region_logvar"] - data_dict["region_mu"].pow(2) - data_dict["region_logvar"].exp(), dim = -1))
-        # )
-        loss_prior = kl_divergence(data_dict["object_mu"], data_dict["object_logvar"]) + kl_divergence(data_dict["region_mu"], data_dict["region_logvar"])
-        loss_vae = loss_recon + 0.1 * loss_prior
-        # variational align loss
-        # loss_align = -0.5 * (
-        #     data_dict["region_logvar"] - data_dict["object_logvar"] + 
-        #     (data_dict["object_logvar"].exp() + (data_dict["object_mu"] - data_dict["region_mu"]).pow(2)) / data_dict["region_logvar"].exp()
-        #     -1
-        # ).sum(dim=-1).mean()
-        loss_align = kl_divergence2(data_dict["object_mu"], data_dict["region_mu"], data_dict["object_logvar"], data_dict["region_logvar"])
-        ic(loss_align, loss_recon, loss_prior)
-        if torch.isnan(loss_align):
-            loss_align = torch.tensor(0.0).to(loss_align) # no aligned regions (0/0 makes nan)
-        loss_align += loss_vae
-        loss_align *= data_dict["align_bs"]
-        # loss_align = loss_vae
-        
-
-    if data_dict.get("use_contrastive", False):
-        # TODO: in GT-matched feature, contrastive within a category!
-        # intra-image contrastive
-        # import torch.linalg
-        ic("Computing contrastive loss...")
-        temp = data_dict.get("contrastive_temperature", 10)
-        B, N_proposal, _ = object_feat_ts.shape
-        region_feats[~align_mask] = 0. # avoid nan
-
-        with torch.no_grad():
-            sim_mask = torch.zeros(B, N_proposal, N_proposal).to(align_mask)
-            sim_mask[~align_mask] = True
-            sim_mask = sim_mask.transpose(-1, -2)
-            sim_mask[~align_mask] = True
-            sim_mask = sim_mask.transpose(-1, -2)
-            targets = torch.arange(N_proposal, device=object_feat_ts.device).unsqueeze(0).expand(B, -1)
-
-        similarity = F.cosine_similarity(object_feat_ts[..., None, :, :], region_feats[..., :, None, :], dim=-1)
-        ic(similarity.shape, targets.shape)
-        
-
-        # object_feat_ts_norm = F.normalize(object_feat_ts, dim=-1) # [B, N_proposal, F]
-        ## region_feats_norm = F.normalize(region_feats, dim=-1) # [B, N_proposal, F]
-        # similarity = torch.bmm(object_feat_ts_norm, region_feats_norm.transpose(-1, -2)) # [B, N_proposal, N_proposal]
-        # similarity[~align_mask] = -1e4
-        # similarity = similarity.transpose(-1, -2)
-        # similarity[~align_mask] = -1e4
-        # similarity = similarity.transpose(-1, -2)
-        similarity[sim_mask] = -1e6
-        # similarity = (similarity * T)
-        loss_intra = F.cross_entropy((similarity * temp).transpose(-1, -2), targets, reduction="none")
-        loss_intra = loss_intra[align_mask].mean()
-        ic(loss_intra.item())
-
-        # inter-image contrastive
-        # perm = torch.randperm(B, device=object_feat_ts.device)
-        # perm_mask = (perm != torch.arange(B, device=perm.device)) # 忽略没动的sample
-        ## region_feats_norm_perm = region_feats_norm[perm] # [B, N_proposal, F]
-        ## region_feats_norm_perm = region_feats_norm[perm] # [B, N_proposal, F]
-        with torch.no_grad():
-            sim_mask = torch.zeros(N_proposal, B, B).to(align_mask)
-            sim_mask[~align_mask.transpose(0, 1)] = True
-            sim_mask = sim_mask.transpose(-1, -2)
-            sim_mask[~align_mask.transpose(0, 1)] = True
-            sim_mask = sim_mask.transpose(-1, -2)
-            targets_batch = torch.arange(B, device=object_feat_ts.device).unsqueeze(0).expand(N_proposal, -1)
-
-        similarity_batch = F.cosine_similarity(object_feat_ts.transpose(0,1)[..., None, :, :], region_feats.transpose(0,1)[..., :, None, :], dim=-1)
-        # similarity_batch = torch.bmm(object_feat_ts_norm.transpose(0, 1), region_feats_norm.permute(1, 2, 0)) # [N_proposal, B, B]
-        # similarity_batch[~align_mask.transpose(0, 1)] = -1e4
-        # similarity_batch = similarity_batch.transpose(-1, -2)
-        # similarity_batch[~align_mask.transpose(0, 1)] = -1e4
-        # similarity_batch = similarity_batch.transpose(-1, -2)
-        similarity_batch[sim_mask] = -1e6
-        loss_inter = F.cross_entropy((similarity_batch * temp).transpose(-1, -2), targets_batch, reduction="none") # [N_proposal, B]
-        loss_inter = loss_inter.transpose(0, 1)[align_mask].mean()
-        ic(loss_inter.item())
-
-        ic(similarity.isnan().any())
-        ic(similarity_batch.isnan().any())
-        ic(object_feat_ts.isnan().any())
-        ic(region_feats.isnan().any())
-
-        loss_align += loss_intra + loss_inter
-
-    if "blip_fused_feat" in data_dict:
-        loss_align_fused = 1 - F.cosine_similarity(data_dict["blip_fused_feat"].mean(dim=1), data_dict["fuse_feat"], dim=-1).sum()
-        loss_align += loss_align_fused
-    # ic(loss_align.detach().cpu().item())
-
-    if "soft_label" in data_dict:
-        # loss_align_label = js_divergence_logits(data_dict["answer_scores"], data_dict["soft_label"]).sum()
-        loss_align_label = kl_divergence_logits(data_dict["answer_scores"], data_dict["soft_label"], temp=1, softmaxed=False).sum()
-        ic(f"loss_align_label: {loss_align_label.item()}")
-        loss_align += 0.01 * loss_align_label
-    
-    return loss_align
-
-def compute_align_loss_gt_matched(data_dict):
-    r"""
-    "objectness_label" ~ pred obj is valid
-    "box_label_mask" ~ gt bbox padding mask
-    'center_label' ~ gt bbox center
-    'object_assignment' ~ [B, K] assigns each proposal to its closest label
-    """
-    
-
-    return ...
-
-def compute_selector_loss(data_dict, loss):
-    # TODO
-    F.mse_loss(data_dict["selector_score"], loss)
-    return data_dict["selector_score"]
-
-
 def get_loss(data_dict, config, detection=True, use_reference=True, use_lang_classifier=False, 
-        use_answer=True, loss_weights=None, use_vlm_align=False, use_selector=False, use_gt_obj_align=False,
+        use_answer=True, loss_weights=None, 
+        # use_vlm_align=False, use_selector=False, use_gt_obj_align=False,
     ):
     """ Loss functions
 
@@ -594,13 +431,14 @@ def get_loss(data_dict, config, detection=True, use_reference=True, use_lang_cla
     else:
         data_dict["lang_loss"] = torch.zeros(1)[0].cuda()
 
-    if use_vlm_align:
-        # if use_gt_obj_align:
-        #     data_dict["align_loss"] = compute_align_loss_gt_matched(data_dict)
-        # else:
-        data_dict["align_loss"] = compute_align_loss(data_dict)
-    else:
-        data_dict["align_loss"] = torch.zeros(1)[0].cuda()
+    # if use_vlm_align:
+    #     # if use_gt_obj_align:
+    #     #     data_dict["align_loss"] = compute_align_loss_gt_matched(data_dict)
+    #     # else:
+    #     data_dict["align_loss"] = compute_align_loss(data_dict)
+    # else:
+    data_dict["align_loss"] = torch.zeros(1)[0].cuda()
+    data_dict["mae_loss"] = torch.zeros(1)[0].cuda()
 
 
     loss = loss_weights.get('vote_loss', 1.) * data_dict['vote_loss'] \
@@ -610,8 +448,8 @@ def get_loss(data_dict, config, detection=True, use_reference=True, use_lang_cla
             + loss_weights.get('ref_loss', 1.) * data_dict["ref_loss"] \
             + loss_weights.get('lang_loss', 1.) * data_dict["lang_loss"] \
             + loss_weights.get('answer_loss', 1.) * data_dict['answer_loss'] \
-            + loss_weights.get('align_loss', 1.) * data_dict['align_loss'] \
             + loss_weights.get('mae_loss', 1.) * data_dict['mae_loss'] \
+            + loss_weights.get('align_loss', 1.) * data_dict['align_loss'] \
     
     # if use_selector:
     #     data_dict["selector_loss"] = compute_selector_loss(data_dict, loss)

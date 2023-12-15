@@ -129,8 +129,12 @@ LOG_SCORE_KEYS = {
 class Solver():
     def __init__(self, model, config, dataloader, optimizer, stamp, val_step=10, epoch=None,
                 cur_criterion="answer_acc_at1", detection=True, use_reference=True, use_lang_classifier=True, use_answer=True, 
-                max_grad_norm=None, lr_decay_step=None, lr_decay_step_2d=None, lr_decay_rate=None, bn_decay_step=None, bn_decay_rate=None, loss_weights=None, use_vlm_align=False, scheduler_type="step",
-                begin_align_epoch=0, save_pred=False, ddp=False, reinit_epoch=-1,
+                max_grad_norm=None, lr_decay_step=None, lr_decay_step_2d=None, lr_decay_rate=None, bn_decay_step=None, bn_decay_rate=None, loss_weights=None, 
+                # use_vlm_align=False, 
+                scheduler_type="step",
+                # begin_align_epoch=0, 
+                save_pred=False, ddp=False, 
+                # reinit_epoch=-1,
     ):
         self.epoch = epoch
         self.verbose = 0
@@ -160,7 +164,7 @@ class Solver():
         self.use_reference = use_reference
         self.use_answer = use_answer
         self.use_lang_classifier = use_lang_classifier
-        self.use_vlm_align = use_vlm_align
+        # self.use_vlm_align = use_vlm_align
 
         self.max_grad_norm = max_grad_norm
         self.lr_decay_step = lr_decay_step
@@ -169,7 +173,7 @@ class Solver():
         self.bn_decay_rate = bn_decay_rate
 
         self.loss_weights = loss_weights
-        self.reinit_epoch = reinit_epoch
+        # self.reinit_epoch = reinit_epoch
 
         self.best = {
             "epoch": 0,
@@ -274,7 +278,7 @@ class Solver():
         else:
             self.bn_scheduler = None
 
-        self.begin_align_epoch = begin_align_epoch
+        # self.begin_align_epoch = begin_align_epoch
         self.save_pred = save_pred
 
     def set_answer_vocab(self, answer_vocab):
@@ -292,9 +296,9 @@ class Solver():
         self._total_iter["val"] = len(self.dataloader["val"]) * self.val_step
 
         for epoch_id in range(epoch):
-            if epoch_id == self.reinit_epoch and self.reinit_epoch > 0:
-                print("reinit model parameters...")
-                self.model_inner.reinit_params()
+            # if epoch_id == self.reinit_epoch and self.reinit_epoch > 0:
+            #     print("reinit model parameters...")
+            #     self.model_inner.reinit_params()
             try:
                 self._log("epoch {} starting...".format(epoch_id + 1))
                 if self.ddp:
@@ -415,7 +419,7 @@ class Solver():
             use_answer=self.use_answer,
             use_lang_classifier=self.use_lang_classifier,
             loss_weights=self.loss_weights,
-            use_vlm_align=self.use_vlm_align and epoch >= self.begin_align_epoch,
+            # use_vlm_align=self.use_vlm_align and epoch >= self.begin_align_epoch,
         )
 
         # dump
@@ -444,14 +448,6 @@ class Solver():
             self._running_log["ref_acc"] = np.mean(data_dict["ref_acc"])     
         if "lang_acc" in data_dict:
             self._running_log["lang_acc"] = data_dict["lang_acc"].item()
-        # self._running_log["answer_acc_at1"] = data_dict["answer_acc_at1"].item()
-        # self._running_log["answer_acc_at10"] = data_dict["answer_acc_at10"].item()
-        # self._running_log["answer_acc_at1_scene"] = data_dict["answer_acc_at1_scene"].item()
-        # self._running_log["answer_acc_at10_scene"] = data_dict["answer_acc_at10_scene"].item()
-        # self._running_log["answer_acc_at1_2d"] = data_dict["answer_acc_at1_2d"].item()
-        # self._running_log["answer_acc_at10_2d"] = data_dict["answer_acc_at10_2d"].item()
-        # self._running_log["answer_acc_at1_2d3d"] = data_dict["answer_acc_at1_2d3d"].item()
-        # self._running_log["answer_acc_at10_2d3d"] = data_dict["answer_acc_at10_2d3d"].item()
         for k, v in data_dict.items():
             if "answer_acc" in k:
                 self._running_log[k] = v.item()
