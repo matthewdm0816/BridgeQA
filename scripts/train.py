@@ -46,7 +46,7 @@ def parse_option():
     parser.add_argument("--gpu", type=str, help="gpu", default="0")
     # Training
     parser.add_argument("--cur_criterion", type=str, default="answer_acc_at1", help="data augmentation type")
-    parser.add_argument("--batch_size", type=int, help="batch size", default=16)
+    # parser.add_argument("--batch_size", type=int, help="batch size", default=16)
     parser.add_argument("--train_batch_size", type=int, help="batch size", default=16)
     parser.add_argument("--val_batch_size", type=int, help="batch size", default=16)
     parser.add_argument("--epoch", type=int, help="number of epochs", default=50)

@@ -279,7 +279,7 @@ class BLIP_VQA3D(nn.Module):
             question_output_scene.last_hidden_state = question_output_scene_hidden_states
             data_dict["2d_self_attention"], data_dict["3d_self_attention"] = question_output.attentions[-1] # take the last layer
             data_dict["2d_cross_attention"], data_dict["3d_cross_attention"] = question_output.cross_attentions[-1]
-            ic(data_dict["2d_self_attention"].shape, data_dict["3d_self_attention"].shape, data_dict["2d_cross_attention"].shape, data_dict["3d_cross_attention"].shape)
+            # ic(data_dict["2d_self_attention"].shape, data_dict["3d_self_attention"].shape, data_dict["2d_cross_attention"].shape, data_dict["3d_cross_attention"].shape)
             
         
         if train:               
