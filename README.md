@@ -1,16 +1,13 @@
 
 # Official codebase for _BridgeQA: Bridging the Gap between 2D and 3D Visual Question Answering: A Fusion Approach for 3D VQA_.
 
-## Acknowledgements
-We would like to thank [facebookresearch/votenet](https://github.com/facebookresearch/votenet) for the 3D object detection, [daveredrum/ScanRefer](https://github.com/daveredrum/ScanRefer) for the 3D localization codebase and [ScanQA](https://github.com/ATR-DBI/ScanQA/) for 3D question answering codebase.
-We also thank [BLIP](https://github.com/salesforce/BLIP/) for the 2D Vision-Language Model and architecture codebase.
+
 
 ## Installation
 Please follow the procedure in [INSTALLATION](docs/installation.md)
 
 ## Data Preparation
-Please follow the same procedure from [ScanQA](docs/dataset.md). 
-
+Please follow the same procedure from [DATASET](docs/dataset.md). Also refer to ScanQA and ScanRefer. 
 
 
 ## Results
@@ -40,8 +37,8 @@ export SLURM_GPUS=4
 torchrun --nproc_per_node=$SLURM_GPUS --nnodes=1 --rdzv_backend=c10d --rdzv_endpoint=localhost:$PORT \
     scripts/train.py --ddp --use_color --tag detection --optim_name adamw --image_size 512 \
     --use_multiview \
-    --dset_views_path /scratch/generalvision/ScanQA-feature/frames_square/ \
-    --i2tfile /scratch/mowentao/BLIP/scene_eval_decl_gpt3.5_aligned_scanqa_qonly_all_video_2.json \
+    --dset_views_path <path/to/views_folder> \
+    --i2tfile <path/to/i2tfile> \
     --train_batch_size 16 --val_batch_size 64 --lr_blip "5e-5" --wd_blip "0.0" --lr "5e-4" --lr_decay_rate 0.2 \
     --val_step 200 --scene_feature_type full \
     --lr_decay_step 15 35 --val_step 200 --scheduler_type step --lr_blip 5e-5 --wd_blip 0.0 --lr 5e-4 \
@@ -91,6 +88,10 @@ We also provide the model checkpoint (pretrained detector and VQA) and the pre-e
 - [ ] Add and combine SQA3D training codes
 - [ ] Update view-selection, training, evaluation instructions
 - [ ] Upload pretrained checkpoints and i2t mappings
+
+## Acknowledgements
+We would like to thank [facebookresearch/votenet](https://github.com/facebookresearch/votenet) for the 3D object detection, [daveredrum/ScanRefer](https://github.com/daveredrum/ScanRefer) for the 3D localization codebase and [ScanQA](https://github.com/ATR-DBI/ScanQA/) for 3D question answering codebase.
+We also thank [BLIP](https://github.com/salesforce/BLIP/) for the 2D Vision-Language Model and architecture codebase.
 
 ## License
 BridgeQA is licensed under a [Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License](LICENSE).
