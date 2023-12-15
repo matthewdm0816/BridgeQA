@@ -86,7 +86,7 @@ class ScanQA(nn.Module):
         use_answer=False,
         use_extra_obj_encoder=False,
         jitter_bbox=False,
-        att_pdrop=0.3,  # temporarily, same with original paper
+        att_pdrop=0,  # temporarily, same with original paper
         att_drop_topk=100,
         save_pred=False,
         visualize_bbox=False,
@@ -577,11 +577,6 @@ class ScanQA(nn.Module):
                 #     # output answer
                 #     data_dict["pred_answers"] = data_dict["answer_scores"].argmax(dim=-1)
 
-            if self.use_soft_label_align:
-                if not (self.soft_label_on_train and data_dict["phase"] != "train"):
-                    question_ids = data_dict["question_id_str"]
-                    data_dict["soft_label"] = torch.stack([self.soft_label[qid] for qid in question_ids], dim=0).to(fuse_feat) # [B, N_ans]
-                    # print(data_dict["answer_scores"][0], data_dict["soft_label"][0])
         
         else:
             # ---VQA branch

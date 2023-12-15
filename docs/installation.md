@@ -2,11 +2,13 @@
 
 This code is based on [ScanRefer](https://github.com/daveredrum/ScanRefer) and [ScanQA](https://github.com/ATR-DBI/ScanQA/). Please also refer to the ScanRefer and ScanQA setup.
 
-<!-- - Install PyTorch:
+- Clone this repository:
     ```shell
-    conda install pytorch==1.12.1 torchvision==0.7.0 cudatoolkit=10.2 -c pytorch
-    ``` -->
-- Install PyTorch: `pytorch==1.12.1 torchvision==0.13.1` compatible your CUDA version.
+    git clone https://github.com/matthewdm0816/BridgeQA.git
+    cd BridgeQA
+    ```
+
+- Install PyTorch: `pytorch==1.12.1 torchvision==0.13.1` compatible with your CUDA version.
 
 - Install the necessary packages with `requirements.txt`:
     ```shell
