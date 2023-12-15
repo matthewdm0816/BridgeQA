@@ -42,8 +42,9 @@ torchrun --nproc_per_node=$SLURM_GPUS --nnodes=1 --rdzv_backend=c10d --rdzv_endp
     --train_batch_size 16 --val_batch_size 64 --lr_blip "5e-5" --wd_blip "0.0" --lr "5e-4" --lr_decay_rate 0.2 \
     --val_step 200 --scene_feature_type full \
     --lr_decay_step 15 35 --val_step 200 --scheduler_type step --lr_blip 5e-5 --wd_blip 0.0 --lr 5e-4 \
-    --stage "DET" --cur_criterion "loss"
+    --stage "DET" --cur_criterion "loss" --no_reference
 ```
+We simply take the last checkpoint as the choice for later VQA training.
 
 ### Training
 To train the VQA model, simply run following command:
@@ -81,13 +82,16 @@ We also provide the model checkpoint (pretrained detector and VQA) and the pre-e
 - [x] Test training
 - [ ] Clean-up prediction codes
 - [ ] Test prediction
+- [ ] Clean-up image-question selection codes
+- [ ] Test image-question selection codes
 - [x] Clean-up detector pre-training.
-- [ ] Test detector pre-training.
+- [x] Test detector pre-training.
 - [x] Clean-up dependencies.
 - [ ] Report performance with this cleaned implementation
-- [ ] Add and combine SQA3D training codes
 - [ ] Update view-selection, training, evaluation instructions
-- [ ] Upload pretrained checkpoints and i2t mappings
+- [ ] Upload pretrained checkpoints and i2t mappings for ScanQA
+- [ ] Add and combine SQA3D training codes
+- [ ] Upload pretrained checkpoints and i2t mappings for SQA
 
 ## Acknowledgements
 We would like to thank [facebookresearch/votenet](https://github.com/facebookresearch/votenet) for the 3D object detection, [daveredrum/ScanRefer](https://github.com/daveredrum/ScanRefer) for the 3D localization codebase and [ScanQA](https://github.com/ATR-DBI/ScanQA/) for 3D question answering codebase.
