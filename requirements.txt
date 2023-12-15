@@ -17,3 +17,4 @@ pycocoevalcap
 icecream
 pretty_errors
 transformers
+colorama

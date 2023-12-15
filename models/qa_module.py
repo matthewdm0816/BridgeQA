@@ -125,9 +125,9 @@ class ScanQA(nn.Module):
         # mae_twice=True,
         # mask_ratio=0.75,
         # recon_xyz=False,
-        # use_clip_lang=False,
-        # clip_model_name="ViT-L-14",
-        # clip_ckpt_name="laion2b_s32b_b82k",
+        use_clip_lang=False,
+        clip_model_name="ViT-L-14",
+        clip_ckpt_name="laion2b_s32b_b82k",
         use_blip=False,
         votenet_ckpt="",
         use_text_decoder=True,
@@ -196,6 +196,7 @@ class ScanQA(nn.Module):
 
         # --- Load BLIP model ---
         self.use_blip = use_blip
+        self.use_vilt = use_vilt
         if use_blip and self.stage != "DET":
             if self.scene_feature_type == "full":
                 scene_feature_size = hidden_size
@@ -493,9 +494,9 @@ class ScanQA(nn.Module):
 
 
     def forward(self, data_dict):
-        # if self.use_contrastive:
-        data_dict["use_contrastive"] = self.use_contrastive
-        data_dict["contrastive_temperature"] = self.contrastive_temperature
+        # # if self.use_contrastive:
+        # data_dict["use_contrastive"] = self.use_contrastive
+        # data_dict["contrastive_temperature"] = self.contrastive_temperature
         
         image_feats = None
         device = data_dict["point_clouds"].device

@@ -8,7 +8,7 @@ import torch.optim as optim
 import numpy as np
 import wandb
 import logging
-
+import colorama
 from torch.utils.data import DataLoader
 from datetime import datetime
 
@@ -18,7 +18,7 @@ from lib.solver import Solver
 from lib.config import CONF 
 from models.qa_module import ScanQA
 
-from utils.vlm_align_util import *
+# from utils.vlm_align_util import *
 
 from pprint import pprint
 import pretty_errors
@@ -127,8 +127,8 @@ def parse_option():
     # parser.add_argument("--vlm_hidden_size", type=int, default=768, help="hidden size of vlm to be aligned") # vit-base: 1024
     # parser.add_argument("--use_vlm_align", action="store_true", help="Use VLM Align")
     # parser.add_argument("--overlap_threshold", type=float, default=0.7, help="") 
-    # parser.add_argument("--i2tfile", type=str, default="/home/mowentao/scratch/BLIP/scene_eval_new.json")
-    # parser.add_argument("--i2tfile_eval", type=str, default="")
+    parser.add_argument("--i2tfile", type=str, default="/home/mowentao/scratch/BLIP/scene_eval_new.json")
+    parser.add_argument("--i2tfile_eval", type=str, default="")
     # parser.add_argument("--objectness_threshold", type=float, default=0.3)
     # parser.add_argument("--align_loss_weight", type=float, default=0.3)
     # parser.add_argument("--align_topk", type=int, default=1)
@@ -423,7 +423,7 @@ def get_model(args, config):
         use_scene_classifier_2d3d=args.use_scene_classifier_2d3d,
         not_copy_weights=args.not_copy_weights,
         scene_encoder_layers=args.scene_encoder_layers,
-        mix_tokens=args.mix_tokens,
+        # mix_tokens=args.mix_tokens,
         share_decoder=args.share_decoder,
         num_hidden_layers_twin=args.num_hidden_layers_twin,
         # grl=args.grl,
@@ -532,10 +532,6 @@ def get_solver(args, dataloader):
     total_steps = args.epoch * len(dataloader["train"])
     print(f"total {total_steps} train iters")
     
-    # if args.scheduler_name == "":
-    #     scheduler = None
-    # elif args.scheduler_name == "linear":
-    #     scheduler = optim.lr_scheduler.LinearLR(optimizer, 1, 0.01,)
 
     print('set optimizer...')
     print(optimizer)
@@ -564,8 +560,8 @@ def get_solver(args, dataloader):
     loss_weights['ref_loss']        = args.ref_loss_weight
     loss_weights['lang_loss']       = args.lang_loss_weight
     loss_weights['answer_loss']     = args.answer_loss_weight
-    loss_weights['align_loss']      = args.align_loss_weight
-    loss_weights['mae_loss']        = args.mae_loss_weight
+    loss_weights['align_loss']      = getattr(args, "align_loss_weight", 0)
+    loss_weights['mae_loss']        = getattr(args, "mae_loss_weight", 0)
 
     solver = Solver(
         model=model, 

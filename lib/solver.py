@@ -283,7 +283,7 @@ class Solver():
 
     def set_answer_vocab(self, answer_vocab):
         self.model_inner.answer_vocab = answer_vocab
-        self.model_inner.load_soft_label()
+        # self.model_inner.load_soft_label()
 
     def __call__(self, epoch, verbose):
         self._start()
