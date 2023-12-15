@@ -18,8 +18,6 @@ from lib.solver import Solver
 from lib.config import CONF 
 from models.qa_module import ScanQA
 
-# from utils.vlm_align_util import *
-
 from pprint import pprint
 import pretty_errors
 from icecream import ic
@@ -45,8 +43,7 @@ def parse_option():
     parser.add_argument("--tag", type=str, help="tag for the training, e.g. XYZ_COLOR", default="")
     parser.add_argument("--gpu", type=str, help="gpu", default="0")
     # Training
-    parser.add_argument("--cur_criterion", type=str, default="answer_acc_at1", help="data augmentation type")
-    # parser.add_argument("--batch_size", type=int, help="batch size", default=16)
+    parser.add_argument("--cur_criterion", type=str, default="answer_acc_at1", help="criterion to decide best")
     parser.add_argument("--train_batch_size", type=int, help="batch size", default=16)
     parser.add_argument("--val_batch_size", type=int, help="batch size", default=16)
     parser.add_argument("--epoch", type=int, help="number of epochs", default=50)
@@ -124,39 +121,11 @@ def parse_option():
     parser.add_argument("--mcan_num_heads", type=int, help="", default=8)
     parser.add_argument("--mcan_num_layers", type=int, help="", default=2) # mcan: 6
     # VLM-align
-    # parser.add_argument("--vlm_hidden_size", type=int, default=768, help="hidden size of vlm to be aligned") # vit-base: 1024
-    # parser.add_argument("--use_vlm_align", action="store_true", help="Use VLM Align")
-    # parser.add_argument("--overlap_threshold", type=float, default=0.7, help="") 
     parser.add_argument("--i2tfile", type=str, default="/home/mowentao/scratch/BLIP/scene_eval_new.json")
     parser.add_argument("--i2tfile_eval", type=str, default="")
-    # parser.add_argument("--objectness_threshold", type=float, default=0.3)
-    # parser.add_argument("--align_loss_weight", type=float, default=0.3)
-    # parser.add_argument("--align_topk", type=int, default=1)
-    # parser.add_argument("--begin_align_epoch", type=int, default=0)
-    # parser.add_argument("--align_fused_vlm", action="store_true", help="")
-    # parser.add_argument("--fuse_vlm", action="store_true", help="")
-    # parser.add_argument("--use_gt_obj_align", action="store_true", help="")
-    # parser.add_argument("--random_sample_topk", action="store_true", help="")
-    # parser.add_argument("--simple_align", action="store_true", help="")
-    # parser.add_argument("--use_extra_obj_encoder", action="store_true", help="")
-    # parser.add_argument("--use_contrastive", action="store_true", help="")
-    # parser.add_argument("--contrastive_temperature", type=float, default=10)
-    # parser.add_argument("--use_vs", action="store_true", help="")
-    # Hard-positive mining
-    # parser.add_argument("--jitter_bbox", action="store_true", help="Jitter BBox")
-    # parser.add_argument("--att_pdrop", type=float, default=0)
-    # parser.add_argument("--att_drop_topk", type=int, default=100)
-    # parser.add_argument("--use_variational_aligner", action="store_true")
-    # parser.add_argument("--use_separate_vae", action="store_true")
-    # parser.add_argument("--vae_latent_size", type=int, default=128)
     parser.add_argument("--save_pred", action="store_true")
-    # parser.add_argument("--align_one_gt", action="store_true")
-    # parser.add_argument("--use_soft_label_align", action="store_true")
-    # parser.add_argument("--soft_label_path", type=str, default="/home/mowentao/scratch/BLIP/2d_finetuned_pred_gpt3.5_trainval.json")
     parser.add_argument("--alternative_ckpt", type=str, default="")
-    # parser.add_argument("--visualize_bbox", action="store_true")
     parser.add_argument("--image_size", type=int, default=768, help="image size of rendered views")
-    # parser.add_argument("--replace_3d_feature", action="store_true")
     
 
     # CLIP/BLIP 
@@ -167,20 +136,10 @@ def parse_option():
     parser.add_argument("--use_clip_lang", action="store_true", help="use clip language encoder")
     parser.add_argument("--clip_lr_scale", type=float, default=0.05, help="clip lr scale")
 
-    # PointNet MAE
-    # parser.add_argument("--use_mae", action="store_true")
-    # parser.add_argument("--mae_loss_weight", type=float, default=0.3)
-    # parser.add_argument("--mae_mask_ratio", type=float, default=0.75)
-    # parser.add_argument("--recon_xyz", action="store_true")
-    
-    # CapQA
-    # parser.add_argument("--sideload_qa", action="store_true")
-    # parser.add_argument("--sideload_append", action="store_true")
     ## DDP option
     parser.add_argument("--ddp", action="store_true", help="Use DDP.")
     ## BLIP integration
     parser.add_argument("--use_blip", action="store_true", help="Use BLIP.")
-    # parser.add_argument("--i2tfile", type=str, default="/home/mowentao/scratch/BLIP/scene_eval_new.json", help="scene-image mapping file")
     parser.add_argument("--lr_blip", type=float, default=1e-4, help="lr for blip")
     parser.add_argument("--lr_blip3d", type=float, default=1e-4, help="lr for blip3d")
     parser.add_argument("--wd_blip", type=float, default=0, help="weight decay for blip")
@@ -189,14 +148,11 @@ def parse_option():
     parser.add_argument("--scene_feature_position", type=str, default="image", help="where to put scene feature")
     parser.add_argument("--scene_feature_type", type=str, default="full", help="which type of scene feature to fuse")
     parser.add_argument("--use_scene_weight", action="store_true", help="Use scene weight.")
-    # parser.add_argument("--project_2d", action="store_true", help="Project 2D feature to 3D.")
-    # parser.add_argument("--depth_fusion", action="store_true", help="Fuse depth.")
     parser.add_argument("--use_scene_classifier", action="store_true", help="Use scene classifier.")
     parser.add_argument("--med_config", type=str, default="/home/mowentao/scratch/BLIP/configs/med_config.json")
     parser.add_argument("--use_scene_classifier_2d3d", action="store_true", help="Use scene classifier-2d3d.")
     parser.add_argument("--not_copy_weights", action="store_true", help="Not copy weights from 2D to 3D.")
     parser.add_argument("--scene_encoder_layers", type=int, default=-1, help="scene encoder layers")
-    # parser.add_argument("--mix_tokens", action="store_true", help="mix tokens")
     parser.add_argument("--share_decoder", action="store_true")
     parser.add_argument("--num_hidden_layers_twin", type=int, default=None) # if none, use num_hidden_layers
     parser.add_argument("--random_scene_view", action="store_true")
@@ -207,13 +163,7 @@ def parse_option():
     parser.add_argument("--first_stage_ckpt_path", type=str, default="", help="Pretrained first stage checkpoint")
     ## No scene
     parser.add_argument("--no_scene", action="store_true", help="No scene.")
-    
-    ## Reinit
-    # parser.add_argument("--reinit_epoch", type=int, default=-1, help="Reinit.")
 
-    # ### GRL
-    # parser.add_argument("--grl", action="store_true", help="Use GRL.")
-    # parser.add_argument("--grl_weight", type=float, default=0.1, help="GRL loss weight.")
 
     ### Customize encoder/decoder layers if "replace" (i.e. 3D only)
     parser.add_argument("--encoder_layers", type=int, default=None)
@@ -221,8 +171,7 @@ def parse_option():
     parser.add_argument("--random_init_blip", action="store_true")
 
     ### Use ViLT as VLM
-    # parser.add_argument("--use_vilt", action="store_true")
-
+    parser.add_argument("--use_vilt", action="store_true")
     parser.add_argument("--project_name", type=str, default="scanqa-new")
     
     args = parser.parse_args()
@@ -269,10 +218,6 @@ def get_dataloader(args, scanqa, all_scene_list, split, config, augment, batch_s
     else:
         tokenizer = None
 
-    # if args.sideload_qa and split == "train":
-    #     sideload_qa_path = "/home/mowentao/scratch/BLIP/fixed_qa.json"
-    # else:
-    #     sideload_qa_path = None
 
     dataset = ScannetQADataset(
         scanqa=scanqa[split], 
@@ -289,10 +234,7 @@ def get_dataloader(args, scanqa, all_scene_list, split, config, augment, batch_s
         tokenizer=tokenizer,
         augment=augment,
         debug=args.debug,
-        # sideload_qa_path=sideload_qa_path,
-        # sideload_append=args.sideload_append and split == "train",
         i2tfile=args.i2tfile if split == "train" or len(args.i2tfile_eval) == 0 else args.i2tfile_eval,
-        # scene_view_topk=args.align_topk,
         dset_views_path=args.dset_views_path,
         random_scene_view=args.random_scene_view,
     )
@@ -364,45 +306,10 @@ def get_model(args, config):
         use_reference=(not args.no_reference),
         use_answer=(not args.no_answer),      
         # vlm align
-        # use_vlm_align=args.use_vlm_align,
-        # replace_3d_feature=args.replace_3d_feature,
-        # vlm_hidden_size=args.vlm_hidden_size,
-        # image_feat_dict=args.image_feat_dict,
-        # grid_size=args.grid_size,
-        # scene_view_map=args.scene_view_map,
-        # align_fused_vlm=args.align_fused_vlm,
-        # fuse_vlm=args.fuse_vlm,
-        # use_gt_obj_align=args.use_gt_obj_align,
-        # bbox_data=args.bbox_data,
-        # objectness_threshold=args.objectness_threshold,
-        # overlap_threshold=args.overlap_threshold,
-        # align_topk=args.align_topk,
-        # random_sample_topk=args.random_sample_topk,
-        # simple_align=args.simple_align,
-        # use_extra_obj_encoder=args.use_extra_obj_encoder,
-        # use_contrastive=args.use_contrastive,
-        # contrastive_temperature=args.contrastive_temperature,
-        # use_variational_aligner=args.use_variational_aligner,
-        # vae_latent_size=args.vae_latent_size,
-        # use_separate_vae=args.use_separate_vae,
-        # use_vs=args.use_vs,
-        # hard-positive mining
-        # jitter_bbox=args.jitter_bbox,
-        # att_pdrop=args.att_pdrop, 
-        # att_drop_topk=args.att_drop_topk,
-        # align_one_gt=args.align_one_gt,
-        # use_soft_label_align=args.use_soft_label_align,
-        # soft_label_on_train=True,
-        # soft_label_path=args.soft_label_path,
-        # visualize_bbox=args.visualize_bbox,
         image_size=args.image_size,
-        # use_mae=args.use_mae,
-        # mask_ratio=args.mae_mask_ratio,
-        # recon_xyz=args.recon_xyz,
         use_clip_lang=args.use_clip_lang,
         clip_model_name=args.clip_model_name,
         clip_ckpt_name=args.clip_ckpt_name,
-        # save_pred=args.save_pred
         use_blip=args.use_blip,
         votenet_ckpt=args.votenet_ckpt,
         use_text_decoder=args.use_text_decoder,
@@ -415,23 +322,17 @@ def get_model(args, config):
         i2tfile=args.i2tfile,
         i2tfile_eval=args.i2tfile_eval if len(args.i2tfile_eval) > 0 else args.i2tfile,
         no_scene=args.no_scene,
-        # project_2d=args.project_2d,
         first_stage_ckpt_path=args.first_stage_ckpt_path,
-        # depth_fusion=args.depth_fusion,
         use_scene_classifier=args.use_scene_classifier,
         med_config=args.med_config,
         use_scene_classifier_2d3d=args.use_scene_classifier_2d3d,
         not_copy_weights=args.not_copy_weights,
         scene_encoder_layers=args.scene_encoder_layers,
-        # mix_tokens=args.mix_tokens,
         share_decoder=args.share_decoder,
         num_hidden_layers_twin=args.num_hidden_layers_twin,
-        # grl=args.grl,
-        # grl_weight=args.grl_weight,
         encoder_layers=args.encoder_layers,
         decoder_layers=args.decoder_layers,
         random_init_blip=args.random_init_blip,
-        # use_vilt=args.use_vilt,
     )
 
     model.load_pretrained()
@@ -583,12 +484,9 @@ def get_solver(args, dataloader):
         bn_decay_step=args.bn_decay_step,
         bn_decay_rate=args.bn_decay_rate,
         loss_weights=loss_weights,
-        # use_vlm_align=args.use_vlm_align,
         scheduler_type=args.scheduler_type,
-        # begin_align_epoch=args.begin_align_epoch,
         save_pred=args.save_pred,
         ddp=args.ddp,
-        # reinit_epoch=args.reinit_epoch,
     )
     num_params = get_num_params(model)
 

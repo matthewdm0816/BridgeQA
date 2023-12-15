@@ -84,47 +84,13 @@ class ScanQA(nn.Module):
         use_lang_cls=False,
         use_reference=False,
         use_answer=False,
-        # vlm align
-        # use_vlm_align=False,
-        # replace_3d_feature=False,
-        # vlm_hidden_size=768,  # 1024 for vit-large
-        # image_feat_dict=None,
-        # grid_size=None,
-        # overlap_threshold=0.7,
-        # scene_view_map=None,
-        # objectness_threshold=0.3,
-        # align_topk=1,
-        # random_sample_topk=False,
-        # begin_align_epoch=0,
-        # align_fused_vlm=False,
-        # fuse_vlm=False,
-        # use_gt_obj_align=False,
-        # simple_align=False,
         use_extra_obj_encoder=False,
-        # use_contrastive=False,
-        # use_variational_aligner=False,
-        # vae_latent_size=128,
-        # contrastive_temperature=10.0,
-        # use_separate_vae=False,
-        # vae_dropout=0,
-        # use_vs=False,
-        # hard-positive mining
         jitter_bbox=False,
         att_pdrop=0.3,  # temporarily, same with original paper
         att_drop_topk=100,
-        # view selector
-        # use_selector=False,
-        # use_mae=False,
         save_pred=False,
-        # align_one_gt=False,
-        # use_soft_label_align=False,
-        # soft_label_on_train=True,
-        # soft_label_path=None,
         visualize_bbox=False,
         image_size=512,
-        # mae_twice=True,
-        # mask_ratio=0.75,
-        # recon_xyz=False,
         use_clip_lang=False,
         clip_model_name="ViT-L-14",
         clip_ckpt_name="laion2b_s32b_b82k",
@@ -140,10 +106,8 @@ class ScanQA(nn.Module):
         i2tfile_eval="",
         no_scene=False,
         scene_feature_type="full",
-        # project_2d=False,
         first_stage_ckpt_path="",
         depth_fusion=False,
-        # answer_vocab=None,
         use_scene_classifier=False,
         med_config='/home/mowentao/scratch/BLIP/configs/med_config.json',
         use_scene_classifier_2d3d=False,
@@ -176,21 +140,12 @@ class ScanQA(nn.Module):
         self.att_drop_topk = att_drop_topk
 
         self.save_pred = save_pred
-        
-        # self.use_mae = use_mae
-        # self.mae_twice = mae_twice
-        # self.recon_xyz = recon_xyz
 
-        # self.use_vlm_align = use_vlm_align
-        # self.align_fused_vlm = align_fused_vlm
-        # self.fuse_vlm = fuse_vlm
 
         self.no_scene = no_scene
         self.scene_feature_type = scene_feature_type
-        # self.project_2d = project_2d
 
         self.first_stage_ckpt_path = first_stage_ckpt_path
-        # self.depth_fusion = depth_fusion
 
         lang_size = hidden_size * (1 + lang_use_bidir)
 
@@ -233,9 +188,6 @@ class ScanQA(nn.Module):
 
         # --- Detector
         # Object detection
-        # if project_2d and use_blip:
-        #     # input_feature_dim = input_feature_dim + self.blip_model.visual_encoder.num_features
-        #     self.proj2d_linear = nn.Linear(self.blip_model.visual_encoder.num_features, input_feature_dim + 3)
 
         self.detection_backbone = Pointnet2Backbone(
             input_feature_dim=input_feature_dim,
@@ -374,47 +326,6 @@ class ScanQA(nn.Module):
         )
         self.fusion_norm = LayerNorm(mcan_flat_out_size)
 
-        # self.contrastive_temperature = contrastive_temperature
-        # self.use_contrastive = use_contrastive
-        # self.use_vs = use_vs
-
-        # if self.use_vs:
-        #     # View Selector
-        #     self.vs = MCAN_E(
-        #         vlm_hidden_size,
-        #         num_heads=mcan_num_heads,
-        #         num_layers=mcan_num_layers,
-        #         pdrop=mcan_pdrop,
-        #     )
-        #     self.attflat_vs = AttFlat(
-        #         vlm_hidden_size, mcan_flat_mlp_size, mcan_flat_glimpses, vlm_hidden_size, 0.1
-        #     )
-
-        # # VLM-alignment head
-        # self.overlap_threshold = overlap_threshold
-        # self.objectness_threshold = objectness_threshold
-        # self.grid_size = grid_size
-        # self.align_topk = align_topk
-        # self.random_sample_topk = random_sample_topk
-        # self.begin_align_epoch = begin_align_epoch
-        # self.use_gt_obj_align = use_gt_obj_align
-
-        # self.use_variational_aligner = use_variational_aligner
-        # self.use_separate_vae = use_separate_vae
-
-        # self.align_one_gt = align_one_gt
-
-        # # Soft label align with 2D VLM
-        # self.use_soft_label_align = use_soft_label_align
-        # self.soft_label_path = soft_label_path
-        # self.soft_label_on_train = soft_label_on_train
-        # from lib.dataset import Answer
-        # self.answer_vocab: Optional[Answer] = None
-        # self.replace_3d_feature = replace_3d_feature
-        # if self.replace_3d_feature:
-        #     self.object_aligner_rev = nn.Linear(vlm_hidden_size, hidden_size)
-
-
         # --- load pretrained votenet
         if votenet_ckpt != "":
             print("loading pretrained votenet from {}".format(votenet_ckpt))
@@ -494,9 +405,6 @@ class ScanQA(nn.Module):
 
 
     def forward(self, data_dict):
-        # # if self.use_contrastive:
-        # data_dict["use_contrastive"] = self.use_contrastive
-        # data_dict["contrastive_temperature"] = self.contrastive_temperature
         
         image_feats = None
         device = data_dict["point_clouds"].device
@@ -505,63 +413,7 @@ class ScanQA(nn.Module):
             scene_ids = data_dict["scene_id_str"]
             question_ids = data_dict["question_id_str"]
             images, poses, depths = self.load_image(data_dict, device)
-            # images ~ [B, num_view, ...]
-            # print("reversing axis align")
-            # original_point_cloud = reverse_align_simple(
-            #     points=data_dict["original_point_cloud"],
-            #     align_mat=data_dict["axis_align_matrix"],
-            # )
-            # if self.project_2d:
-            #     align_proj_feats = []
-            #     align_proj_masks = []
-            #     image_feats_grid_list = []
-            #     projection_weight_list = []
-            #     for idx in range(self.align_topk):
-            #         poses_idx = poses[:, idx].reshape(-1, 4, 4)
-            #         # if idx == 0 or not self.random_project:
-            #         image_feats_grid, projection_weight = self.blip_model(images[:, idx], None, embed_image=True)
-            #         # else:
-            #         #     # random take one of the topk
-            #         #     rand_
-            #         #     image_feats_grid, projection_weight = self.blip_model(images[:, idx], None, embed_image=True, random_project=True)
-            #         # [B, 1 + G * G, F], [B, 1]
-            #         if idx == 0:
-            #             image_feats = image_feats_grid.clone() # save best image feats
-            #         image_feats_grid = image_feats_grid.transpose(1, 2)[..., 1:] # [B, F, G * G], remove [CLS] token
-            #         grid_size = round(image_feats_grid.shape[-1] ** 0.5)
-            #         image_feats_grid = image_feats_grid.reshape(*image_feats_grid.shape[:2], grid_size, grid_size) # [B, F, G, G]
-            #         # proj_feats [B, num_points, F], proj_masks [B, num_points]
-            #         # image_feats_grid_list.append(image_feats_grid)
-            #         # projection_weight_list.append(projection_weight)
-
-            #     # # softmax projection_weight over views
-            #     # projection_weight = torch.stack(projection_weight_list, dim=1) # [B, num_views, 1]
-            #     # projection_weight = torch.softmax(projection_weight, dim=1) # [B, num_views, 1]
-            #     # projection_weight = projection_weight.unsqueeze(-1) # [B, num_views, 1, 1]
-                
-            #     # for idx in range(self.align_topk):
-            #         proj_feats, proj_masks = project_blip_to_pointcloud(
-            #             original_point_cloud, 
-            #             # image_feats_grid_list[idx] * projection_weight[:, idx],
-            #             image_feats_grid * projection_weight.unsqueeze(-1).unsqueeze(-1),
-            #             depths[:, idx], 
-            #             poses_idx, 
-            #             grad=True
-            #         )
-            #         align_proj_feats.append(proj_feats)
-            #         align_proj_masks.append(proj_masks.unsqueeze(-1))
-            #     align_proj_feats = torch.stack(align_proj_feats, dim=1) # [B, num_views, num_points, F]
-            #     align_proj_masks = torch.stack(align_proj_masks, dim=1) # [B, num_views, num_points, 1]
-            #     # max-pool over views, if mask is 1, otherwise 0
-            #     # align_proj_feats = align_proj_feats.sum(dim=1) / (align_proj_masks.sum(dim=1) + 1e-6) # [B, num_points, F]
-            #     align_proj_feats[~align_proj_masks.expand(-1, -1, -1, align_proj_feats.size(-1))] = -1e6
-            #     align_proj_feats = align_proj_feats.max(dim=1)[0] # [B, num_points, F]
-            #     align_proj_feats[align_proj_feats == -1e6] = 0
-
-            #     proj_feats = self.proj2d_linear(align_proj_feats)
-                
-            #     data_dict["point_clouds"] = data_dict["point_clouds"] + proj_feats
-
+            
             
 
         #######################################
@@ -614,29 +466,6 @@ class ScanQA(nn.Module):
             object_feat
         )  # batch_size, num_proposal, hidden_size
 
-        # if self.use_mae:
-        #     pointgroup_xyz = data_dict["aggregated_vote_xyz"]
-        #     if self.recon_xyz:
-        #         object_feat = torch.cat([pointgroup_xyz, object_feat], dim=-1)
-        #     if data_dict["phase"] == "train":
-        #         loss_mae, object_feat_mae_recon, _ = self.object_mae(object_feat, mask_ratio=self.mask_ratio)
-        #         if self.mae_twice:
-        #             # re-encode the object feature
-        #             _, object_feat, _ = self.object_mae(object_feat, encoder_only=True)
-        #             object_feat = object_feat[:, 1:, :] # remove the [CLS] token
-        #         else:
-        #             # use the reconstructed object feature
-        #             object_feat = object_feat_mae_recon
-        #             if self.recon_xyz:
-        #                 object_feat = object_feat[:, :, 3:]
-        #         data_dict["mae_loss"] = loss_mae
-        #     else:
-        #         # encode the object feature using the MAE encoder
-        #         _, object_feat, _ = self.object_mae(object_feat, encoder_only=True)
-        #         object_feat = object_feat[:, 1:, :] # remove the [CLS] token
-        #         data_dict["mae_loss"] = torch.zeros(1).to(object_feat.device)
-
-        #     object_feat = self.object_mae_linear(object_feat)
         if _not_use_mae := True:
             data_dict["mae_loss"] = torch.zeros(1).to(object_feat.device)
 
@@ -803,9 +632,6 @@ class ScanQA(nn.Module):
                     raise NotImplementedError
 
                 depth_map = None
-                # if self.depth_fusion:
-                #     depth_map = enet_to_blip(depths[:, 0].unsqueeze(1)) # [B, 1, H, W]
-                #     depth_map = depth_map.squeeze(1).flatten(-2, -1).unsqueeze(-1) # [B, H*W, 1]
 
                 if self.use_vilt:
                     print(data_dict["images_raw"].shape)

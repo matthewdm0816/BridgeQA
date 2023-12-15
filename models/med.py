@@ -604,12 +604,12 @@ class BertEncoderTwin(BertEncoder):
                     # ic(len(layer_outputs))
                     self_attentions_twin = layer_outputs_twin[1]
                     self_attentions = self_attentions + (self_attentions_twin, )
-                    print(f"3D self attention shape: {self_attentions_twin.shape}") # shall be [B, N_head, L, L]
+                    # print(f"3D self attention shape: {self_attentions_twin.shape}") # shall be [B, N_head, L, L]
 
                     if all_cross_attentions is not None:
                         cross_attentions_twin = layer_outputs_twin[-2]
                         cross_attentions = cross_attentions + (cross_attentions_twin, )
-                        print(f"3D cross attention shape: {cross_attentions_twin.shape}") # shall be [B, N_head, L, L_3D]
+                        # print(f"3D cross attention shape: {cross_attentions_twin.shape}") # shall be [B, N_head, L, L_3D]
 
             hidden_states = layer_outputs[0]
             # hidden_states_twin = layer_outputs_twin[0]

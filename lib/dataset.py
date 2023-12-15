@@ -240,19 +240,6 @@ class ScannetQADataset(Dataset):
             self.scene_view_topk = scene_view_topk
             self.scene_view_map = load_scene_view_map(i2tfile)
             assert self.scene_view_map is not None, "Provide q-view mapping to load less images"  
-            # qid2scene = {d["question_id"]: d["scene_id"] for d in self.scanqa}
-            # eff_images: dict[str, list] = {}  
-            # for qid, pred in scene_view_map.items():
-            #     # scene_id = f"{qid.strip().split('-')[1]}_00"
-            #     try:
-            #         scene_id = qid2scene[int(qid)]
-            #     except:
-            #         scene_id = qid2scene[str(qid)]
-
-            #     image_names = pred[:scene_view_topk]
-            #     if scene_id not in eff_images:
-            #         eff_images[scene_id] = []
-            #     eff_images[scene_id].extend(image_names)
 
             self.scene_view_pool = SceneViewsPoolLite(dset_views_path, SCAN_NAMES, preprocess_vqa)
             print(f"Using {self.scene_view_topk} views per question")
