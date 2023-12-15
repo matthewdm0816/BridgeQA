@@ -564,7 +564,7 @@ class Solver():
             # record all scores
             for key, value in data_dict.items():
                 if "pred_answer_scores" in key:
-                    print(phase, value.shape)
+                    # print(phase, value.shape)
                     self.log[phase][key] += value.cpu().detach().tolist()
 
             self.log[phase]["scene_id"] += [scene_number_to_id[scene_number] for scene_number in data_dict["scene_id"].tolist()]

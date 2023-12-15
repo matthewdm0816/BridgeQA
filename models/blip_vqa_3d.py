@@ -254,7 +254,7 @@ class BLIP_VQA3D(nn.Module):
 
         # concat scene object
         if scene_object_embeds is not None:
-            print(image_embeds.shape, scene_object_embeds.shape)
+            # print(image_embeds.shape, scene_object_embeds.shape)
             scene_object_embeds = self.linear_scene_object(scene_object_embeds) # [batch_size, num_objects, hidden_size]
             if image_pose is not None and not self.parallel:
                 # concat camera pose into 3D scene object information
