@@ -7,13 +7,13 @@ We also thank [BLIP](https://github.com/salesforce/BLIP/) for the 2D Vision-Lang
 <!-- [facebookresearch/votenet](https://github.com/daveredrum/ScanRefer) for the 3D object detection codebase and [erikwijmans/Pointnet2_PyTorch](https://github.com/erikwijmans/Pointnet2_PyTorch) for the CUDA accelerated PointNet++ implementation. -->
 
 ## TODO
-- [ ] Make copy of BLIP codes
+- [-] Make copy of BLIP codes
 - [-] Clean-up model codes
-- [ ] Clean-up training codes
+- [-] Clean-up training codes
 - [ ] Test training
 - [ ] Clean-up prediction codes
 - [ ] Test prediction
-- [ ] Clean-up dependencies.
+- [-] Clean-up dependencies.
 
 ## License
 BridgeQA is licensed under a [Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License](LICENSE).
