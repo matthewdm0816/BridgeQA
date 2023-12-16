@@ -29,7 +29,7 @@ SCAN_NAMES = list(
     )
 )
 SCENE_FEAT_PATH = os.path.join(DATA_DIR, "scene_blip_features.pkl")
-BLIP_PATH = "/home/mowentao/scratch/BLIP"
+BLIP_PATH = CURRENT_DIR
 
 import multiprocessing
 from multiprocessing.spawn import freeze_support
@@ -70,18 +70,8 @@ from models.blip_vqa_3d import blip_vqa3d
 import math
 from time import time
 
-from lib.projection import ProjectionHelper, Projection
-
-# projection
-INTRINSICS = [[37.01983, 0, 20, 0],[0, 38.52470, 15.5, 0],[0, 0, 1, 0],[0, 0, 0, 1]]
-# PROJECTOR = ProjectionHelper(INTRINSICS, 0.1, 4.0, [41, 32], 0.05)
-FEAT_SIZE = [41, 32]
-# FEAT_SIZE = [328, 256]
-
-PROJECTOR = None
 
 sys.path.append(".")
-# from BLIP.utils_eval_blip import *
 
 logger = logging.getLogger(__name__)
 
@@ -101,74 +91,6 @@ def preprocess(image):
     )
     image = transform(image)
     return image
-
-# def blip_to_enet(feat):
-#     # blip: [B, C, G, G], typically 30x30 for 480x480 image and ViT-L
-#     # enet: [B, C, 32, 41]
-#     # convert back to 480x480
-#     image_feat = F.interpolate(feat, size=(480, 480), mode="bicubic", align_corners=False)
-#     enet_feat = F.interpolate(image_feat, size=(32, 41), mode="bicubic", align_corners=False)
-#     return enet_feat
-
-# def enet_to_blip(feat, grid_size=(30, 30)):
-#     # enet: [B, C, 32, 41]
-#     # blip: [B, C, G, G], typically 30x30 for 480x480 image and ViT-L
-#     # convert back to 480x480
-#     image_feat = F.interpolate(feat, size=(256, 328), mode="bicubic", align_corners=False)
-#     blip_feat = F.interpolate(image_feat, size=grid_size, mode="bicubic", align_corners=False)
-#     return blip_feat
-
-# def project_enet_feature(pcs, feats, depths, poses, grad=False):
-#     # init projector
-#     global PROJECTOR
-#     if PROJECTOR is None:
-#         PROJECTOR = ProjectionHelper(INTRINSICS, 0.1, 4.0, FEAT_SIZE, 0.05)
-
-#     if grad:
-#         projector = Projection.apply
-#     else:
-#         projector = PROJECTOR.project
-#     # batch_size, num_points
-#     B, P = pcs.shape[:2]
-    
-#     indices_3ds = torch.zeros(B, P + 1).long().cuda()
-#     indices_2ds = torch.zeros(B, P + 1).long().cuda()
-
-#     for i in range(B):
-#         indices = PROJECTOR.compute_projection(pcs[i], depths[i], poses[i])
-#         if indices:
-#             indices_3ds[i] = indices[0].long()
-#             indices_2ds[i] = indices[1].long()
-#             # print("found {} mappings in {} points from frame {}".format(indices_3ds[i][0], num_points, i))
-        
-#     # indice_3d, indice_2d = PROJECTOR.compute_projection(pc, depth, pose) # [N_p, K]
-
-#     # feat ~ [C, H, W]
-#     # NOTE: no-gradient?
-#     proj_feats = feats.new_zeros(B, P, feats.size(1)) # [B, N_p, C]
-#     feat_masks = feats.new_zeros(B, P).bool() # [B, N_p]
-#     for i in range(B):
-#         proj_feat = projector(feats[i], indices_3ds[i], indices_2ds[i], P).transpose(1, 0) # [N_p, C]
-#         # find out which points are projected
-#         feat_mask = ((proj_feat == 0).sum(1) != proj_feat.size(1)).bool() # [N_p], remaining filled with 0 feature
-#         proj_feats[i] = proj_feat
-#         feat_masks[i] = feat_mask
-#     return proj_feats, feat_masks
-
-# def project_blip_to_pointcloud(pcs, feats, depths, poses, grad=False):
-#     enet_feats = blip_to_enet(feats)
-#     proj_feats, feat_masks = project_enet_feature(pcs, enet_feats, depths, poses, grad=grad)
-#     return proj_feats, feat_masks
-
-# def project_patch_to_pointcloud(pcs, feats, depths, poses, grad=False):
-#     # feats [B, C, G, G] => [B, G, G] of one-hot position encoding
-#     # feats_pos = torch.arange(32 * 41).to(feats.device).long().view(1, 1, feats.size(2), feats.size(3)).expand(feats.size(0)) # [B, 1, G, G]
-#     G = feats.size(2)
-#     feats_pos = torch.stack(torch.meshgrid(torch.arange(G), torch.arange(G)), dim=-1) # [G, G, 2]
-#     feats_pos = feats_pos.permute(2, 0, 1).unsqueeze(0).expand(feats.size(0), 2, G, G).to(feats.device) # [B, 2, G, G]
-#     feats_pos = blip_to_enet(feats_pos) # [B, 2, 32, 41]
-#     patch_assignment, feat_masks = project_enet_feature(pcs, feats_pos, depths, poses, grad=grad) # [B, N_p, 2]
-#     ...
 
 
 def preprocess_vqa(image):
@@ -429,32 +351,6 @@ def get_blip_model_simple(alternative_ckpt: str="", random_init_blip=False, **kw
 
     return model, grid_size
 
-
-def parse_string(string):
-    """
-    Extracts 6 values from a string in the format "-?\d+\.\d+_(-?\d+\.\d+)_(-?\d+\.\d+)_(-?\d+)_(-?\d+)_(-?\d+)".
-    The first 3 values are floats, and the last 3 are integers.
-
-    Parameters:
-        string (str): The input string to be parsed, e.g. "-1.87_1.74_1.82_1_1_0.jpg"
-
-
-    Returns:
-        list: A list of the extracted values, in the order they appear in the string. The values will be of the
-            correct data types (float or int). If the string does not match the expected format, returns None.
-    """
-
-    # Use a regex pattern to extract the values from the input string
-    pattern = r"(-?\d+\.\d+)_(-?\d+\.\d+)_(-?\d+\.\d+)_(-?\d+)_(-?\d+)_(-?\d+)"
-    match = re.match(pattern, string)
-    if match:
-        # Convert the extracted values to the correct data types
-        values = [float(val) for val in match.groups()[:3]] + [
-            int(val) for val in match.groups()[3:]
-        ]
-        return values
-    else:
-        return None
 
 def repeat_elements(lst, n):
     # Create a new list to store the repeated elements

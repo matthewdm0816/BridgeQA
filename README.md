@@ -4,7 +4,7 @@
 
 
 ## Installation
-Please follow the procedure in [INSTALLATION](docs/installation.md)
+Please follow the procedure in [INSTALLATION](docs/installation.md).
 
 ## Data Preparation
 Please follow the same procedure from [DATASET](docs/dataset.md). Also refer to ScanQA and ScanRefer. 
@@ -25,12 +25,29 @@ We listed the performance on two test splits (test w/ obj / test w/o obj)
 
 ## Training
 All model outputs and checkpoints will be saved under `./outputs/` path. You can find the checkpoints and logs of each run after training.
+We also provide pretrained or pre-converted files [HERE](#checkpoints-and-pre-converted-files)
 
 ### Quesiton-Conditional View Selection
+#### Question-Declaration Transform
+To transform question to corresponding declaration, run following command:
+```shell
+```
+Replication note: since OpenAI has deprecated its older version of `gpt-3.5-0xxx`, and the randomness of nucleus sampling, you might not be able to acquire the same result as ours. You can refer to our [result](#checkpoints-and-pre-converted-files), or try a newer GPT model, or try out powerful open-source LLM alternatives like [Mistral-MoE](https://mistral.ai/news/mixtral-of-experts/).
 
+#### View Selection
+To select view for a question, run following command:
+```shell
+stdbuf -o0 -e0 python eval_scene_best_views.py  \
+    --outfile <path/to/result>  --topk_images 1 \
+    --answer_freq_threshold 0  --max_answer_count 3000 \
+    --dset_views_path <path/to/views_folder> --nocheck_blank --split "train,val,test_w_obj,test_wo_obj"  \
+    --use_composed_qa --composed_qa_json <path/to/composed_decl> \
+```
+You can also use the original question to find the best view at inference time. 
+For SQA, replace the `split` option to "train,val,test".
 
 ### Pretraining Detector
-To pretrain a VoteNet detector, simply run following command with QA loss and 2D VLM disabled:
+To pretrain a VoteNet detector, simply run following command without 2D VLM and QA-related losses:
 ```shell
 export PORT=$(shuf -i 2000-3000 -n 1)
 export SLURM_GPUS=4
@@ -65,15 +82,17 @@ torchrun --nproc_per_node=$SLURM_GPUS --nnodes=1 --rdzv_backend=c10d --rdzv_endp
     --epoch 10 --lr_decay_step 5 8 --lr_decay_step_2d 3 5 7
 ```
 
-## Checkpoints and Question-View Mapping
+## Checkpoints and Pre-converted files
 We also provide the model checkpoint (pretrained detector and VQA) and the pre-extracted question-view Mapping file here.
-|       Checkpoint/Mapping       |                                        Pretrained File                                        |
-|:------------------------------:|:---------------------------------------------------------------------------------------------:|
-| Question-View Mapping (ScanQA) | [Link](https://drive.google.com/file/d/18lHk2eTwL8urK5xjZhDTjA-THBOQR06M/view?usp=drive_link) |
-|   Question-View Mapping (SQA)  |                                            [Link]()                                           |
-|       Pretrained VoteNet       | [Link](https://drive.google.com/file/d/134r4TUTKFz0M8J-a6MB4SP9KS689tnFx/view?usp=drive_link) |
-|      BridgeQA (on ScanQA)      | [Link](https://drive.google.com/file/d/1qaYi24XpKHS-mVGKjAmgg9j9TR_xf3DG/view?usp=drive_link) |
-|        BridgeQA (on SQA)       |                                            [Link]()                                           |
+|         Checkpoint/Mapping         |                                        Pretrained File                                        |
+|:----------------------------------:|:---------------------------------------------------------------------------------------------:|
+|         Pretrained VoteNet         | [Link](https://drive.google.com/file/d/134r4TUTKFz0M8J-a6MB4SP9KS689tnFx/view?usp=drive_link) |
+| Declaration from Question (ScanQA) |                                            [🚧]()                                           |
+|   Question-View Mapping (ScanQA)   | [Link](https://drive.google.com/file/d/18lHk2eTwL8urK5xjZhDTjA-THBOQR06M/view?usp=drive_link) |
+|          BridgeQA (ScanQA)         | [Link](https://drive.google.com/file/d/1qaYi24XpKHS-mVGKjAmgg9j9TR_xf3DG/view?usp=drive_link) |
+|   Declaration from Question (SQA)  |                                            [🚧]()                                           |
+|     Question-View Mapping (SQA)    |                                            [🚧]()                                           |
+|           BridgeQA (SQA)           |                                            [🚧]()                                           |
 
 ## TODO
 - [x] Make copy of BLIP codes
@@ -89,7 +108,7 @@ We also provide the model checkpoint (pretrained detector and VQA) and the pre-e
 - [x] Clean-up dependencies.
 - [ ] Report performance with this cleaned implementation
 - [ ] Update view-selection, training, evaluation instructions
-- [ ] Upload pretrained checkpoints and i2t mappings for ScanQA
+- [x] Upload pretrained checkpoints and i2t mappings for ScanQA
 - [ ] Add and combine SQA3D training codes
 - [ ] Upload pretrained checkpoints and i2t mappings for SQA
 

@@ -32,6 +32,9 @@ from utils.blip_utils import *
 from utils.reset_weight import weight_reset
 from transformers import AutoConfig
 import torch.distributed as dist
+import logging
+
+logger = logging.getLogger(__name__)
 
 def multilabel_onehot(multiple_labels, bs, num_labels):
     ones = torch.ones(bs, num_labels).to(multiple_labels).float()
@@ -388,7 +391,16 @@ class ScanQA(nn.Module):
 
             # 1. filter out unnecessary keys
             pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
-            print(list(pretrained_dict.keys()))
+            # 1.1 filter out incompatible keys
+            incompatible_keys = []
+            for k, v in pretrained_dict.items():
+                if v.shape != model_dict[k].shape:
+                    incompatible_keys.append(k)
+            logger.warn("incompatible keys: ")
+            logger.warn(incompatible_keys)
+            pretrained_dict = {k: v for k, v in pretrained_dict.items() if k not in incompatible_keys}
+            logger.warn("to load keys: ")
+            logger.warn(list(pretrained_dict.keys()))
             # 2. overwrite entries in the existing state dict
             model_dict.update(pretrained_dict)
             # 3. load the new state dict

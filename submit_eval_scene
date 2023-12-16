@@ -1,0 +1,104 @@
+#!/bin/bash
+#SBATCH --job-name=blip-eval   # create a short name for your job
+#SBATCH --partition=gpu          # specify the partition name: gpu 
+#SBATCH --qos=lv0b
+#SBATCH --nodes=1                # node count
+#SBATCH --ntasks=1              # total number of tasks across all nodes
+#SBATCH --ntasks-per-node=1
+#SBATCH --mem=300G               # total memory (RAM) per node
+#SBATCH --time=10:00:00          # total run time limit (HH:MM:SS)
+#SBATCH --cpus-per-task=32       # cpu-cores per task (>1 if multi-threaded tasks)
+#SBATCH --gres=gpu:1     # number of gpus per node
+#SBATCH --output=logs/i2t-%j.out      # output format
+#SBATCH --error=logs/i2t-%j.out     # error output file
+# #SBATCH --exclude=lambda-hyperplane[02]
+
+
+#--------------------task  part-------------------------
+## clean env
+#module purge
+## load environment need by this task 
+#module load slurm/slurm/20.11.8
+
+## the extra library path
+# export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/scratch/mowentao/conda3.9/lib/
+
+## load conda 
+#module load anaconda3/2021.11
+#module load cuda11.1/
+## source a conda environment
+cd /home/mowentao/scratch/BLIP/
+
+## Unicycle Training
+export PORT=$(shuf -i 2000-3000 -n 1)
+
+## Unicycle Training
+export all_proxy='http://10.141.0.110:17893'
+export HF_DATASETS_OFFLINE=1
+export TRANSFORMERS_OFFLINE=1
+
+export SLURM_GPUS=$(($(echo $SLURM_JOB_GPUS | tr -cd , | wc -c)+1))
+echo $SLURM_GPUS
+
+# stdbuf -o0 -e0 python generate_caption.py
+# stdbuf -o0 -e0 python eval_scene_best_views.py --outfile="scene_eval_new_dryrun.json" --split='val' --dryrun --topk_images 1 --random
+# stdbuf -o0 -e0 python eval_vqa.py 
+
+# ScanQA
+stdbuf -o0 -e0 python eval_scene_best_views.py  \
+    --outfile "scene_eval_scanqa_decl_qonly_gpt3.5_reimpl.json"  --topk_images 1 \
+    --answer_freq_threshold 0  --max_answer_count 3000 \
+    --dset_views_path "/scratch/generalvision/ScanQA-feature/frames_square/" --nocheck_blank --split "train,val,test_w_obj,test_wo_obj"  \
+    --use_composed_qa --composed_qa_json "/scratch/mowentao/toys/composed_decl_gpt3.5_scanqa_qonly_all.json" \
+    # --dset_views_path "/home/mowentao/data/ScanQA/data/scene_views_aligned"
+    # --use_composed_qa --composed_qa_json "/home/mowentao/scratch/toys/composed_decl_from_qa_gpt3.5.json" \
+    # --split "train,val"
+    # --dset_views_path "/scratch/generalvision/ScanQA-feature/frames_square/" --nocheck_blank
+    # --use_composed_qa --composed_qa_json "/home/mowentao/scratch/toys/composed_decl_from_qa_gpt3.5.json" --split "train,val,test,"
+    # --split='val' --dryrun --topk_images 1 --random
+
+
+
+# SQA
+# stdbuf -o0 -e0 python eval_scene_best_views.py  \
+#     --outfile "scene_eval_sqa_video_qonly_interrogative.pkl"  --topk_images 1 \
+#     --answer_freq_threshold 0  --max_answer_count 3000 \
+#     --dset_views_path "/scratch/generalvision/ScanQA-feature/frames_square/" --nocheck_blank --split "train,val,test"  \
+#     --dataset "sqa" # --use_composed_qa --composed_qa_json "/scratch/mowentao/toys/composed_decl_gpt3.5_sqa_qonly_all.json" \
+
+
+# stdbuf -o0 -e0 python eval_scene_best_views.py  \
+#     --outfile="scene_eval_decl_gpt3.5_all_aligned_sqa.json" --topk_images 1 --answer_freq_threshold 0 --dataset "sqa" \
+#     --use_composed_qa --composed_qa_json "/scratch/mowentao/toys/composed_decl_from_qa_sqa_gpt3.5_sqa.json" --split "train,val,test" \
+#     --split='val' --dryrun
+
+# stdbuf -o0 -e0 python train_scene_view_vqa.py \
+#     --i2tfile "scene_eval_new.json" \
+#     --topk_images 1 \
+#     --train_batch_size 16 \
+#     --eval_batch_size 16 \
+#     --dset_views_path "/home/mowentao/data/ScanQA/data/rendered_images_new" \
+#     --use_selector \
+#     --coeff_selector 1 \
+#     --scene_range ":"
+
+# stdbuf -o0 -e0 torchrun --nproc_per_node=$SLURM_GPUS --nnodes=1 --rdzv_backend=c10d --rdzv_endpoint=localhost:$PORT \
+#     train_scene_view_vqa.py \
+#     --i2tfile "/scratch/generalvision/ScanQA-feature/scene_view_map_video.json" \
+#     --topk_images 1 \
+#     --train_batch_size 32 \
+#     --eval_batch_size 16 \
+#     --dset_views_path "/scratch/generalvision/ScanQA-feature/selected_images/" \
+#     --postfix "sqa" --epochs 10 # --use_situation  # --scene_range ":50"
+# stdbuf -o0 -e0 python pre-compute-blip-feature.py
+# CUDA_LAUNCH_BLOCKING=1 stdbuf -o0 -e0 python -m torch.distributed.launch --nproc_per_node=$SLURM_GPUS --master_port=$(shuf -i 2000-2500 -n 1) train_scene_view_vqa.py
+
+# stdbuf -o0 -e0 python /home/mowentao/scratch/toys/render_scene_views.py --range 0:100
+# stdbuf -o0 -e0 python /home/mowentao/scratch/toys/render_scene_views.py --range 100:200
+# stdbuf -o0 -e0 python /home/mowentao/scratch/toys/render_scene_views.py --range 200:300
+# stdbuf -o0 -e0 python /home/mowentao/scratch/toys/render_scene_views.py --range 300:400
+# stdbuf -o0 -e0 python /home/mowentao/scratch/toys/render_scene_views.py --range 400:500
+# stdbuf -o0 -e0 python /home/mowentao/scratch/toys/render_scene_views.py --range 500:600
+# stdbuf -o0 -e0 python /home/mowentao/scratch/toys/render_scene_views.py --range 600:700
+# stdbuf -o0 -e0 python /home/mowentao/scratch/toys/render_scene_views.py --range 700:
+# stdbuf -o0 -e0 python /home/mowentao/scratch/toys/render_scene_views.py --range 100:200
