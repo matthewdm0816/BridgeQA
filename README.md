@@ -31,13 +31,15 @@ We also provide pretrained or pre-converted files [HERE](#checkpoints-and-pre-co
 #### Question-Declaration Transform
 To transform question to corresponding declaration, run following command:
 ```shell
+export OPENAI_API_KEY = <your-openai-key>
+python compose_decl_from_qa.py 
 ```
-Replication note: since OpenAI has deprecated its older version of `gpt-3.5-0xxx`, and the randomness of nucleus sampling, you might not be able to acquire the same result as ours. You can refer to our [result](#checkpoints-and-pre-converted-files), or try a newer GPT model, or try out powerful open-source LLM alternatives like [Mistral-MoE](https://mistral.ai/news/mixtral-of-experts/).
+Replication note: since OpenAI has deprecated its older version of `gpt-3.5-0xxx`, and the randomness of nucleus sampling, you might not be able to acquire the same result as ours. You can refer to our [result](#checkpoints-and-pre-converted-files) that is used in our reported performance, or try a newer GPT model, or try out powerful open-source LLM alternatives like [Mistral-MoE](https://mistral.ai/news/mixtral-of-experts/).
 
 #### View Selection
-To select view for a question, run following command:
+To select views for questions, run following command:
 ```shell
-stdbuf -o0 -e0 python eval_scene_best_views.py  \
+python eval_scene_best_views.py  \
     --outfile <path/to/result>  --topk_images 1 \
     --answer_freq_threshold 0  --max_answer_count 3000 \
     --dset_views_path <path/to/views_folder> --nocheck_blank --split "train,val,test_w_obj,test_wo_obj"  \
@@ -83,7 +85,7 @@ torchrun --nproc_per_node=$SLURM_GPUS --nnodes=1 --rdzv_backend=c10d --rdzv_endp
 ```
 
 ## Checkpoints and Pre-converted files
-We also provide the model checkpoint (pretrained detector and VQA) and the pre-extracted question-view Mapping file here.
+We also provide the model checkpoint (pretrained detector and VQA) and other pre-computed files (question-view correspondece, declaration from quetion) here.
 |         Checkpoint/Mapping         |                                        Pretrained File                                        |
 |:----------------------------------:|:---------------------------------------------------------------------------------------------:|
 |         Pretrained VoteNet         | [Link](https://drive.google.com/file/d/134r4TUTKFz0M8J-a6MB4SP9KS689tnFx/view?usp=drive_link) |
@@ -101,13 +103,17 @@ We also provide the model checkpoint (pretrained detector and VQA) and the pre-e
 - [x] Test training
 - [ ] Clean-up prediction codes
 - [ ] Test prediction
-- [ ] Clean-up image-question selection codes
+- [x] Clean-up q2d codes
+- [x] Test q2d codes
+- [x] Clean-up image-question selection codes
 - [ ] Test image-question selection codes
 - [x] Clean-up detector pre-training.
 - [x] Test detector pre-training.
 - [x] Clean-up dependencies.
 - [ ] Report performance with this cleaned implementation
-- [ ] Update view-selection, training, evaluation instructions
+- [x] Update view-selection, training instructions
+- [ ] Update evaluation instructions
+- [x] Update q2d instructions
 - [x] Upload pretrained checkpoints and i2t mappings for ScanQA
 - [ ] Add and combine SQA3D training codes
 - [ ] Upload pretrained checkpoints and i2t mappings for SQA

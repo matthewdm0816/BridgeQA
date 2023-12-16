@@ -18,3 +18,4 @@ icecream
 pretty_errors
 transformers
 colorama
+openai
