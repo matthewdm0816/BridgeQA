@@ -20,6 +20,6 @@ This code is based on [ScanRefer](https://github.com/daveredrum/ScanRefer) and [
     cd lib/pointnet2
     python setup.py install
     ```
-- Download BLIP checkpoints [HERE](https://storage.googleapis.com/sfr-vision-language-research/BLIP/models/model_base_vqa_capfilt_large.pth) and put to `ckpts` path.
+- Download BLIP checkpoints for [VQA](https://storage.googleapis.com/sfr-vision-language-research/BLIP/models/model_base_vqa_capfilt_large.pth) and [Image-Text Retrieval](https://storage.googleapis.com/sfr-vision-language-research/BLIP/models/model_large_retrieval_coco.pth), and put them to `ckpts` path.
 
 Note that this code has been tested with Python 3.9.7, pytorch 1.12.1, and CUDA 11.3 on Ubuntu 20.04.1.
