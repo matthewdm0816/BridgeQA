@@ -27,7 +27,8 @@
 #module load anaconda3/2021.11
 #module load cuda11.1/
 ## source a conda environment
-cd /home/mowentao/scratch/BLIP/
+# cd /scratch/generalvision/mowentao/ScanQA-cleaned
+cd /home/mowentao/scratch/BLIP
 
 ## Unicycle Training
 export PORT=$(shuf -i 2000-3000 -n 1)
@@ -47,9 +48,10 @@ echo $SLURM_GPUS
 # ScanQA
 stdbuf -o0 -e0 python eval_scene_best_views.py  \
     --outfile "scene_eval_scanqa_decl_qonly_gpt3.5_reimpl.json"  --topk_images 1 \
-    --answer_freq_threshold 0  --max_answer_count 3000 \
     --dset_views_path "/scratch/generalvision/ScanQA-feature/frames_square/" --nocheck_blank --split "train,val,test_w_obj,test_wo_obj"  \
-    --use_composed_qa --composed_qa_json "/scratch/mowentao/toys/composed_decl_gpt3.5_scanqa_qonly_all.json" \
+    --use_composed_qa --composed_qa_json "/scratch/generalvision/mowentao/ScanQA-cleaned/composed_decl_scanqa_qonly_reimpl.json" \
+    # --answer_freq_threshold 0  --max_answer_count 3000 \
+
     # --dset_views_path "/home/mowentao/data/ScanQA/data/scene_views_aligned"
     # --use_composed_qa --composed_qa_json "/home/mowentao/scratch/toys/composed_decl_from_qa_gpt3.5.json" \
     # --split "train,val"

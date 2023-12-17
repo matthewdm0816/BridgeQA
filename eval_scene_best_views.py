@@ -1,5 +1,7 @@
+import os
+
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.path.join(CURRENT_DIR, "..", "data")
+DATA_DIR = os.path.join(CURRENT_DIR, "data")
 
 DSET_PATH_SCANQA = {
     "test_w_obj": os.path.join(DATA_DIR, "qa/ScanQA_v1.0_test_w_obj.json"),
