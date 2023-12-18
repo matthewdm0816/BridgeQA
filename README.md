@@ -34,7 +34,7 @@ To transform question to corresponding declaration, run following command:
 export OPENAI_API_KEY = <your-openai-key>
 python compose_decl_from_qa.py 
 ```
-Replication note: since OpenAI has deprecated its older version of `gpt-3.5-0xxx`, and the randomness of nucleus sampling, you might not be able to acquire the same result as ours. You can refer to our [result](#checkpoints-and-pre-converted-files) that is used in our reported performance, or try a newer GPT model, or try out powerful open-source LLM alternatives like [Mistral-MoE](https://mistral.ai/news/mixtral-of-experts/).
+Replication note: since OpenAI will deprecate its older version GPT-4 of `gpt-3.5-0301`, and the randomness of nucleus sampling, you might not be able to acquire the same result declaration as ours. You can refer to our [result](#checkpoints-and-pre-converted-files) that is used in our reported performance. You can also 
 
 #### View Selection
 To select views for questions, run following command:

@@ -231,8 +231,9 @@ class SceneViewsPool:
             self.images[scan_name][img_name] = self.preprocess(img)
 
 def load_scene_view_map(i2tfile):
+    logger.info("Loading scene view map...")
     if i2tfile.endswith(".pkl"):
-        tmp = torch.load(i2tfile)
+        tmp = torch.load(i2tfile, map_location="cpu")
     else:
         tmp = json.load(open(i2tfile, "r"))
     pred = tmp["view"]
@@ -333,7 +334,7 @@ def get_blip_model_simple(alternative_ckpt: str="", random_init_blip=False, **kw
     logger.info("Loading BLIP Models...")
     # pretrained = os.path.join(BLIP_PATH, "ckpts/model_base_vqa_capfilt_large.pth") if not random_init_blip else None
     model = blip_vqa3d(
-        pretrained=os.path.join(BLIP_PATH, "ckpts/model_base_vqa_capfilt_large.pth"),
+        pretrained=os.path.join(BLIP_PATH, "../ckpts/model_base_vqa_capfilt_large.pth"),
         image_size=480, 
         vit="base",
         random_init_blip=random_init_blip,
