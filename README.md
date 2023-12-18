@@ -13,10 +13,12 @@ Please follow the same procedure from [DATASET](docs/dataset.md). Also refer to 
 ## Results
 ### ScanQA
 We listed the performance on two test splits (test w/ obj / test w/o obj)
-|        Method       |     EM@1    |     B-1     |     B-4     |      R      |      M      |      C      |
-|:-------------------:|:-----------:|:-----------:|:-----------:|:-----------:|:-----------:|:-----------:|
-|       Reported      | 31.29/30.82 | 34.49/34.41 | 24.06/17.74 | 43.26/41.18 | 16.51/15.60 | 83.75/79.34 |
-| This Implementation |             |             |             |             |             |             |
+|        Method                              |     EM@1    |     B-1     |     B-4     |      R      |      M      |      C      |
+|:------------------------------------------:|:-----------:|:-----------:|:-----------:|:-----------:|:-----------:|:-----------:|
+|       Reported                             | 31.29/30.82 | 34.49/34.41 | 24.06/17.74 | 43.26/41.18 | 16.51/15.60 | 83.75/79.34 |
+| This Implementation (Using `gpt-3.5-1106`) | 30.73/30.41 | 33.70/33.90 | 20.96/17.87 | 42.46/40.79 | 16.11/15.43 | 81.75/78.16 |
+| This Implementation (Using `gpt-3.5-0301`) | 31.31/31.31 | 34.09/33.90 | 24.94/17.93 | 43.15/41.73 | 16.40/15.85 | 83.38/80.22 |
+
 ### SQA
 |        Method       |  Acc  |
 |:-------------------:|:-----:|
@@ -34,7 +36,7 @@ To transform question to corresponding declaration, run following command:
 export OPENAI_API_KEY = <your-openai-key>
 python compose_decl_from_qa.py 
 ```
-Replication note: since OpenAI will deprecate its older version GPT-4 of `gpt-3.5-0301`, and the randomness of nucleus sampling, you might not be able to acquire the same result declaration as ours. You can refer to our [result](#checkpoints-and-pre-converted-files) that is used in our reported performance. You can also 
+Replication note: since OpenAI will deprecate its older version GPT-4 of `gpt-3.5-0301`, and the randomness of nucleus sampling, you might not be able to acquire the same result declaration as ours. You can refer to our [result](#checkpoints-and-pre-converted-files) that is used in our reported performance.
 
 #### View Selection
 To select views for questions, run following command:
@@ -122,7 +124,7 @@ We also provide the model checkpoint (pretrained detector and VQA) and other pre
 - [x] Clean-up detector pre-training.
 - [x] Test detector pre-training.
 - [x] Clean-up dependencies.
-- [ ] Report performance with this cleaned implementation
+- [x] Report performance with this cleaned implementation
 - [x] Update view-selection, training instructions
 - [x] Update evaluation instructions
 - [x] Update q2d instructions
