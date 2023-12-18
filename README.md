@@ -84,6 +84,17 @@ torchrun --nproc_per_node=$SLURM_GPUS --nnodes=1 --rdzv_backend=c10d --rdzv_endp
     --epoch 10 --lr_decay_step 5 8 --lr_decay_step_2d 3 5 7
 ```
 
+### Inference
+To inference and make a prediction, simply run following command:
+```shell
+export PORT=$(shuf -i 2000-3000 -n 1)
+torchrun --nproc_per_node=$SLURM_GPUS --nnodes=1 --rdzv_backend=c10d --rdzv_endpoint=localhost:$PORT \
+    scripts/predict.py \
+    --folder <path/to/traininin_output> \
+    --i2tfile <path/to/i2tfile> \
+    --test_type <split-to-test> --batch_size 2 \
+```
+
 ## Checkpoints and Pre-converted files
 We also provide the model checkpoint (pretrained detector and VQA) and other pre-computed files (question-view correspondece, declaration from quetion) here.
 |         Checkpoint/Mapping         |                                        Pretrained File                                        |
@@ -101,18 +112,18 @@ We also provide the model checkpoint (pretrained detector and VQA) and other pre
 - [x] Clean-up model codes
 - [x] Clean-up training codes
 - [x] Test training
-- [ ] Clean-up prediction codes
+- [x] Clean-up prediction codes
 - [ ] Test prediction
 - [x] Clean-up q2d codes
 - [x] Test q2d codes
 - [x] Clean-up image-question selection codes
-- [ ] Test image-question selection codes
+- [x] Test image-question selection codes
 - [x] Clean-up detector pre-training.
 - [x] Test detector pre-training.
 - [x] Clean-up dependencies.
 - [ ] Report performance with this cleaned implementation
 - [x] Update view-selection, training instructions
-- [ ] Update evaluation instructions
+- [x] Update evaluation instructions
 - [x] Update q2d instructions
 - [x] Upload pretrained checkpoints and i2t mappings for ScanQA
 - [ ] Add and combine SQA3D training codes

@@ -72,7 +72,7 @@ def get_dataloader(args, scanqa, all_scene_list, split, config):
         use_multiview=args.use_multiview,
         tokenizer=tokenizer,
         i2tfile=args.i2tfile if len(args.i2tfile_eval) == 0 else args.i2tfile_eval,
-        scene_view_topk=args.align_topk,
+        # scene_view_topk=args.align_topk,
         dset_views_path=args.dset_views_path,
     )
     print("predict for {} samples".format(len(dataset)))
