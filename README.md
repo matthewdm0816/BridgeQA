@@ -21,7 +21,7 @@ We listed the performance on two test splits (test w/ obj / test w/o obj)
 |        Method       |  Acc  |
 |:-------------------:|:-----:|
 |       Reported      | 52.91 |
-| This Implementation |       |
+| This Implementation |  🚧   |
 
 ## Training
 All model outputs and checkpoints will be saved under `./outputs/` path. You can find the checkpoints and logs of each run after training.
@@ -100,7 +100,7 @@ We also provide the model checkpoint (pretrained detector and VQA) and other pre
 |         Checkpoint/Mapping         |                                        Pretrained File                                        |
 |:----------------------------------:|:---------------------------------------------------------------------------------------------:|
 |         Pretrained VoteNet         | [Link](https://drive.google.com/file/d/134r4TUTKFz0M8J-a6MB4SP9KS689tnFx/view?usp=drive_link) |
-| Declaration from Question (ScanQA) |                                            [🚧]()                                           |
+| Declaration from Question (ScanQA) | [Link](https://drive.google.com/file/d/10bqVuPE7bsUHh-HH8n52UXN0v0JFy7yx/view?usp=sharing)    |
 |   Question-View Mapping (ScanQA)   | [Link](https://drive.google.com/file/d/18lHk2eTwL8urK5xjZhDTjA-THBOQR06M/view?usp=drive_link) |
 |          BridgeQA (ScanQA)         | [Link](https://drive.google.com/file/d/1qaYi24XpKHS-mVGKjAmgg9j9TR_xf3DG/view?usp=drive_link) |
 |   Declaration from Question (SQA)  |                                            [🚧]()                                           |
