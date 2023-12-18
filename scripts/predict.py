@@ -355,11 +355,16 @@ def predict(args):
                 "question_id": scanqa[scanqa_idx]["question_id"],
                 "answer_top10": pred_answers_top10,
                 "bbox": pred_bbox.tolist(),
-                "2d_self_attention": data_dict["2d_self_attention"][i].detach().cpu().numpy().tolist(),
-                "3d_self_attention": data_dict["3d_self_attention"][i].detach().cpu().numpy().tolist(),
-                "2d_cross_attention": data_dict["2d_cross_attention"][i].detach().cpu().numpy().tolist(),
-                "3d_cross_attention": data_dict["3d_cross_attention"][i].detach().cpu().numpy().tolist(),
             }
+            if args.output_attention:
+                pred_data.update(
+                    {
+                        "2d_self_attention": data_dict["2d_self_attention"][i].detach().cpu().numpy().tolist(),
+                        "3d_self_attention": data_dict["3d_self_attention"][i].detach().cpu().numpy().tolist(),
+                        "2d_cross_attention": data_dict["2d_cross_attention"][i].detach().cpu().numpy().tolist(),
+                        "3d_cross_attention": data_dict["3d_cross_attention"][i].detach().cpu().numpy().tolist(),
+                    }
+                )
             pred_bboxes.append(pred_data)
 
     # dump
@@ -395,6 +400,7 @@ if __name__ == "__main__":
     parser.add_argument("--i2tfile", type=str, default=None, help="")
     parser.add_argument("--open_ended", action="store_true", help="use open-ended evaluation")
     parser.add_argument("--midfix", type=str, default="", help="midfix")
+    parser.add_argument("--output_attention", action="store_true", help="output attention")
     # --i2tfile "/scratch/mowentao/BLIP/scene_eval_scanqa_interrogative_video.pkl" \
     args = parser.parse_args()
     train_args = json.load(open(os.path.join(CONF.PATH.OUTPUT, args.folder, "info.json")))

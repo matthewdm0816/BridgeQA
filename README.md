@@ -94,6 +94,7 @@ torchrun --nproc_per_node=$SLURM_GPUS --nnodes=1 --rdzv_backend=c10d --rdzv_endp
     --i2tfile <path/to/i2tfile> \
     --test_type <split-to-test> --batch_size 2 \
 ```
+and the prediction can be found at the same folder as the training output.
 
 ## Checkpoints and Pre-converted files
 We also provide the model checkpoint (pretrained detector and VQA) and other pre-computed files (question-view correspondece, declaration from quetion) here.
@@ -113,7 +114,7 @@ We also provide the model checkpoint (pretrained detector and VQA) and other pre
 - [x] Clean-up training codes
 - [x] Test training
 - [x] Clean-up prediction codes
-- [ ] Test prediction
+- [x] Test prediction
 - [x] Clean-up q2d codes
 - [x] Test q2d codes
 - [x] Clean-up image-question selection codes
