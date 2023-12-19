@@ -44,7 +44,7 @@ if __name__ == "__main__":
     import torch
     import torch.multiprocessing
     from PIL import Image
-    import validators
+    # import validators
     import requests
     from torchvision import transforms
     from torchvision.transforms.functional import InterpolationMode
