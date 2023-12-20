@@ -34,20 +34,21 @@ We also provide pretrained or pre-converted files [HERE](#checkpoints-and-pre-co
 To transform question to corresponding declaration, run following command:
 ```shell
 export OPENAI_API_KEY = <your-openai-key>
-python compose_decl_from_qa.py 
+python compose_decl_from_qa.py --output_qa_file <path/to/decl_file>
 ```
-Replication note: since OpenAI will deprecate its older version GPT-4 of `gpt-3.5-0301`, and the randomness of nucleus sampling, you might not be able to acquire the same result declaration as ours. You can refer to our [result](#checkpoints-and-pre-converted-files) that is used in our reported performance.
+The output JSON file of declarations is saved as specfied in `output_qa_file` option. 
+Replication note: since OpenAI will deprecate its older version GPT-4 of `gpt-3.5-0301`, and the randomness of nucleus sampling, you might not be able to acquire the same result declaration as ours. You can refer to our [pre-converted file](https://drive.google.com/file/d/10bqVuPE7bsUHh-HH8n52UXN0v0JFy7yx/view?usp=sharing) that is used in our reported performance.
 
 #### View Selection
 To select views for questions, run following command:
 ```shell
 python eval_scene_best_views.py  \
     --outfile <path/to/result>  --topk_images 1 \
-    --answer_freq_threshold 0  --max_answer_count 3000 \
     --dset_views_path <path/to/views_folder> --nocheck_blank --split "train,val,test_w_obj,test_wo_obj"  \
     --use_composed_qa --composed_qa_json <path/to/composed_decl> \
 ```
-You can also use the original question to find the best view at inference time. 
+The result `.pkl` file (written to specified `outfile` option) is used for later training procedure as the `--i2tfile` parameter. 
+You can also use the original question to find the best view at inference time.
 For SQA, replace the `split` option to "train,val,test".
 
 ### Pretraining Detector
@@ -65,7 +66,10 @@ torchrun --nproc_per_node=$SLURM_GPUS --nnodes=1 --rdzv_backend=c10d --rdzv_endp
     --lr_decay_step 15 35 --val_step 200 --scheduler_type step --lr_blip 5e-5 --wd_blip 0.0 --lr 5e-4 \
     --stage "DET" --cur_criterion "loss" --no_reference
 ```
-We simply take the last checkpoint as the choice for later VQA training.
+`dset_views_path` should be set to the dataset frames path where you download in [Data Preparation](#data-preparation).
+`i2tfile` should be set to the `.pkl` file you obtained at the [View Selection](#view-selection) step.
+The training checkpoints, logs and configs will be saved in a new directory with training date-time info under `./outputs`.
+We simply take the last checkpoint `model_last.pth` as the choice for later VQA training.
 
 ### Training
 To train the VQA model, simply run following command:
@@ -85,6 +89,10 @@ torchrun --nproc_per_node=$SLURM_GPUS --nnodes=1 --rdzv_backend=c10d --rdzv_endp
     --scene_feature_position paralleltwin --lr_blip3d "3e-5" --scheduler_type step_except_2d \
     --epoch 10 --lr_decay_step 5 8 --lr_decay_step_2d 3 5 7
 ```
+`dset_views_path` should be set to the dataset frames path where you download in [Data Preparation](#data-preparation).
+`i2tfile` should be set to the `.pkl` file you obtained at the [View Selection](#view-selection) step.
+`first_stage_ckpt_path` should be set to the model result folder under `./outputs` at detector pretrain stage.
+The training checkpoints, logs and configs will be saved in a new directory with training date-time info under `./outputs`.
 
 ### Inference
 To inference and make a prediction, simply run following command:
@@ -96,7 +104,8 @@ torchrun --nproc_per_node=$SLURM_GPUS --nnodes=1 --rdzv_backend=c10d --rdzv_endp
     --i2tfile <path/to/i2tfile> \
     --test_type <split-to-test> --batch_size 2 \
 ```
-and the prediction can be found at the same folder as the training output.
+and the prediction can be found at the same folder as the training output. 
+We use the best checkpoint (the `model.pth`) verified on validation set to predict the results on test splits.
 
 ## Checkpoints and Pre-converted files
 We also provide the model checkpoint (pretrained detector and VQA) and other pre-computed files (question-view correspondece, declaration from quetion) here.
