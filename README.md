@@ -1,7 +1,7 @@
 
-# Official codebase for _BridgeQA: Bridging the Gap between 2D and 3D Visual Question Answering: A Fusion Approach for 3D VQA_.
+# _BridgeQA: Bridging the Gap between 2D and 3D Visual Question Answering: A Fusion Approach for 3D VQA_ - Official Codebase
 
-
+This work is accepeted by AAAI 2024.
 
 ## Installation
 Please follow the procedure in [INSTALLATION](docs/installation.md).
@@ -151,4 +151,4 @@ We also thank [BLIP](https://github.com/salesforce/BLIP/) for the 2D Vision-Lang
 ## License
 BridgeQA is licensed under a [Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License](LICENSE).
 
-Copyright (c) 2023.
+Copyright (c) Wentao Mo, 2024.
