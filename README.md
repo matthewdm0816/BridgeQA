@@ -3,6 +3,9 @@
 
 This work is accepeted by AAAI 2024.
 
+ 	
+[![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/bridging-the-gap-between-2d-and-3d-visual/3d-question-answering-3d-qa-on-scanqa-test-w)](https://paperswithcode.com/sota/3d-question-answering-3d-qa-on-scanqa-test-w?p=bridging-the-gap-between-2d-and-3d-visual)
+
 ## Installation
 Please follow the procedure in [INSTALLATION](docs/installation.md).
 
