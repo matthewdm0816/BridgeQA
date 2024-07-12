@@ -149,7 +149,7 @@ def parse_option():
     parser.add_argument("--scene_feature_type", type=str, default="full", help="which type of scene feature to fuse")
     parser.add_argument("--use_scene_weight", action="store_true", help="Use scene weight.")
     parser.add_argument("--use_scene_classifier", action="store_true", help="Use scene classifier.")
-    parser.add_argument("--med_config", type=str, default="/home/mowentao/scratch/BLIP/configs/med_config.json")
+    parser.add_argument("--med_config", type=str, default="configs/med_config.json")
     parser.add_argument("--use_scene_classifier_2d3d", action="store_true", help="Use scene classifier-2d3d.")
     parser.add_argument("--not_copy_weights", action="store_true", help="Not copy weights from 2D to 3D.")
     parser.add_argument("--scene_encoder_layers", type=int, default=-1, help="scene encoder layers")

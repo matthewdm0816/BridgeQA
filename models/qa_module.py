@@ -112,7 +112,7 @@ class ScanQA(nn.Module):
         first_stage_ckpt_path="",
         depth_fusion=False,
         use_scene_classifier=False,
-        med_config='/home/mowentao/scratch/BLIP/configs/med_config.json',
+        med_config='configs/med_config.json',
         use_scene_classifier_2d3d=False,
         not_copy_weights=False,
         scene_encoder_layers=2,

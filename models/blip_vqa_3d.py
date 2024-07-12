@@ -14,7 +14,7 @@ from icecream import ic
 import os
 
 SAVE_PATH = "./temp_model.pth"
-DEFAULT_BLIP_CONFIG = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../BLIP/configs/med_config.json")
+DEFAULT_BLIP_CONFIG = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../configs/med_config.json")
 
 def to_all_answer_score(ans_idx, ans_score, num_answers, batch_size):
     all_answer_score = torch.zeros(
@@ -44,7 +44,6 @@ def concat_repeat(a, b, n_repeat):
 
 class BLIP_VQA3D(nn.Module):
     def __init__(self,                 
-                 #  med_config = '/home/mowentao/scratch/BLIP/configs/med_config.json',  
                  med_config = DEFAULT_BLIP_CONFIG,
                  image_size = 480,
                  vit = 'base',
@@ -89,6 +88,8 @@ class BLIP_VQA3D(nn.Module):
         self.tokenizer = init_tokenizer()  
 
         print(f"Unused kwargs: {kwargs}")
+
+        med_config = DEFAULT_BLIP_CONFIG # force use the default config
         
         encoder_config = BertConfig.from_json_file(med_config)
         if encoder_layers is not None:
